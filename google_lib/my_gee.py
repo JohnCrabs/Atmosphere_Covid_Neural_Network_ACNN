@@ -70,7 +70,7 @@ def download_image_from_collection(collection_id, image_band, img_name, list_dat
                 timer_value = waiting_time
             while task.status()['state'] is 'READY':
                 if is_timer:
-                    time.sleep(secs=1)
+                    time.sleep(1)
                     timer_value -= 1
                     if timer_value == 0:
                         break
