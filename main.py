@@ -1,10 +1,13 @@
 import pandas as pd
+# import matplotlib.pyplot as plt
 from my_lib import my_calendar_v2 as my_cal_v2
 from google_lib import my_gee
 
 # ----------------------------------------- #
 # ---------- 1) Find Date Ranges ---------- #
 # ----------------------------------------- #
+
+download_satellite_data = False
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
 end_date = "2020-12-31"  # "YYYY-MM-DD"
@@ -71,6 +74,19 @@ def find_unique_values_list(list_input: []):
     return list_output
 
 
+def create_dictionary_from_list_column(list_input: [], key_column_index: int):
+    dict_output = {}
+    for row in list_input:
+        if row[key_column_index] not in dict_output.keys():
+            dict_output[row[key_column_index]] = []
+        tmp_list = []
+        for index in range(0, len(row)):
+            if index != key_column_index:
+                tmp_list.append(row[index])
+        dict_output[row[key_column_index]].append(tmp_list)
+    return dict_output
+
+
 str_covid_measures_csv_path = "Data/covid_measures.csv"
 df_covid_measures = pd.read_csv(str_covid_measures_csv_path, low_memory=False)
 # print(df_covid_measures.head())
@@ -79,11 +95,18 @@ list_unique_countries = df_covid_measures.COUNTRY.unique()
 # print(list_unique_countries)
 # print(len(list_unique_countries))
 
-df_pollution_dataset = df_covid_measures[['COUNTRY', 'ID', 'DATE', 'RESTRICTIONS_INTERNAL_MOVEMENTS',
-                                          'INTERNATIONAL_TRAVEL_CONTROLS', 'CONTINENT', 'POPULATION',
-                                          'POPULATION_DENSITY', 'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS',
-                                          'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS',
-                                          'WORKPLACE_CLOSURES']]
+# df_pollution_dataset = df_covid_measures[['COUNTRY', 'ID', 'DATE', 'RESTRICTIONS_INTERNAL_MOVEMENTS',
+#                                           'INTERNATIONAL_TRAVEL_CONTROLS', 'CONTINENT', 'POPULATION',
+#                                           'POPULATION_DENSITY', 'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS',
+#                                           'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS',
+#                                           'WORKPLACE_CLOSURES']]
+
+df_pollution_dataset = df_covid_measures[['COUNTRY', 'DATE', 'RESTRICTIONS_INTERNAL_MOVEMENTS',
+                                          'INTERNATIONAL_TRAVEL_CONTROLS', 'CANCEL_PUBLIC_EVENTS',
+                                          'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+                                          'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']]
+
+
 df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCINATION_POLICY',
                                       'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
                                       'CONTINENT', 'TOTAL_CASES', 'NEW_CASES_SMOOTHED', 'TOTAL_DEATHS',
@@ -106,31 +129,34 @@ df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCI
                                       'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']]
 
 
+df_polllution_dict = create_dictionary_from_list_column(list_input=df_pollution_dataset.values.tolist(),
+                                                        key_column_index=0)
+
 # --------------------------------------------------- #
 # ---------- 3) Download Sentiner-5 Images ---------- #
 # --------------------------------------------------- #
 
 # my_gee.clear_tasks()
-list_collection_id = ['COPERNICUS/S5P/OFFL/L3_O3', 'COPERNICUS/S5P/OFFL/L3_CO', 'COPERNICUS/S5P/OFFL/L3_AER_AI',
-                      'COPERNICUS/S5P/OFFL/L3_HCHO', 'COPERNICUS/S5P/OFFL/L3_SO2',
-                      'COPERNICUS/S5P/OFFL/L3_NO2']
-list_colection_bands = ['O3_column_number_density', 'CO_column_number_density', 'absorbing_aerosol_index',
-                        'tropospheric_HCHO_column_number_density', 'SO2_column_number_density',
-                        'NO2_column_number_density']
-list_collection_names = ['ozone_O3_density', 'carbon_monoxide_CO_density', 'absorbing_aerosol_index',
-                         'offline_formaldehyde_HCHO_density', 'sulphur_dioxide_SO2_density'
-                         'nitrogen_dioxide_NO2_density']
+if download_satellite_data:
+    list_collection_id = ['COPERNICUS/S5P/OFFL/L3_O3', 'COPERNICUS/S5P/OFFL/L3_CO', 'COPERNICUS/S5P/OFFL/L3_AER_AI',
+                          'COPERNICUS/S5P/OFFL/L3_HCHO', 'COPERNICUS/S5P/OFFL/L3_SO2',
+                          'COPERNICUS/S5P/OFFL/L3_NO2']
+    list_colection_bands = ['O3_column_number_density', 'CO_column_number_density', 'absorbing_aerosol_index',
+                            'tropospheric_HCHO_column_number_density', 'SO2_column_number_density',
+                            'NO2_column_number_density']
+    list_collection_names = ['ozone_O3_density', 'carbon_monoxide_CO_density', 'absorbing_aerosol_index',
+                             'offline_formaldehyde_HCHO_density', 'sulphur_dioxide_SO2_density'
+                             'nitrogen_dioxide_NO2_density']
 
-
-list_S5_data_len = len(list_collection_id)
-scale_m_per_px = 5000
-waiting_minute_multiplier = 5
-waiting_time_in_sec = int(waiting_minute_multiplier)*60
-for i in range(0, list_S5_data_len):
-    my_gee.download_image_from_collection(collection_id=list_collection_id[i],
-                                          image_band=list_colection_bands[i],
-                                          img_name=list_collection_names[i],
-                                          list_date_range=list_date_period_ranges,
-                                          list_countries=list_unique_countries,
-                                          scale=scale_m_per_px,
-                                          waiting_time=waiting_time_in_sec)
+    list_S5_data_len = len(list_collection_id)
+    scale_m_per_px = 5000
+    waiting_minute_multiplier = 5
+    waiting_time_in_sec = int(waiting_minute_multiplier)*60
+    for i in range(0, list_S5_data_len):
+        my_gee.download_image_from_collection(collection_id=list_collection_id[i],
+                                              image_band=list_colection_bands[i],
+                                              img_name=list_collection_names[i],
+                                              list_date_range=list_date_period_ranges,
+                                              list_countries=list_unique_countries,
+                                              scale=scale_m_per_px,
+                                              waiting_time=waiting_time_in_sec)
