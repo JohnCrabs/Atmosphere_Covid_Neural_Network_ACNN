@@ -102,6 +102,10 @@ NaN = "nan"
 EMPTY_LIST = []
 EMPTY_DICT = {}
 
+merge_min = 'min'
+merge_max = 'max'
+merge_mean = 'mean'
+merge_median = 'median'
 
 # ------------------------------- #
 # ---------- FUNCTIONS ---------- #
@@ -462,7 +466,6 @@ def change_date_format_from_string(str_date: str, date_format_from: str, date_fo
                                date_format=date_format_to, date_delimeter=date_delimeter_to)
     return new_date
 
-
 # ------------------------------------- #
 # ---------- 3) GENERAL USED ---------- #
 # ------------------------------------- #
@@ -527,6 +530,81 @@ def break_date_range_to_periods(date_start, date_end, period_step, date_format, 
                 curr_year += 1
 
     return date_range_list
+
+
+def merge_values_in_date_range_list(list_input: [], date_index: int, date_range_list: [], merge_type=merge_mean):
+    import statistics
+
+    def raw_data(in_row):
+        tmp_in_raw_data = []
+        for raw_index in range(0, len(in_row)):
+            if raw_index != date_index:
+                tmp_in_raw_data.append(in_row[raw_index])
+        return tmp_in_raw_data
+
+    merged_list = []  # Create an empty list
+    tmp_zero_list = []  # create a list with size of data_length - 1 (-1 due to one column is the date column)
+    tmp_list_of_empty_lists = []  # create a list with size of data_length - 1 (-1 due to one column is the date column)
+    for _ in range(len(list_input[0]) - 1):  # append the values
+        tmp_zero_list.append(0.0)
+        tmp_list_of_empty_lists.append([])
+
+    for date_range in date_range_list:  # for each date range
+        start_date = date_range[0]  # set the start date
+        end_date = date_range[1]  # set the end date
+        str_date_range = start_date + "__" + end_date  # create a sting with date range
+
+        if merge_type == merge_min:  # if merge type is min
+            tmp_data_min = []  # temporaty data list to store the min values
+            for row in list_input:  # for row in list_input
+                if start_date <= row[date_index] <= end_date:  # if date in date range
+                    if start_date == row[date_index]:  # if start date equals to row_date
+                        tmp_data_min = raw_data(in_row=row)  # create the temporary list
+                    else:  # else
+                        tmp_raw_data = raw_data(in_row=row)  # create a temporary list to store row date
+                        for index in range(0, len(tmp_raw_data)):  # for index in range
+                            if tmp_raw_data[index] < tmp_data_min[index]:  # check if the new value is minimum
+                                tmp_data_min[index] = tmp_raw_data[index]  # set the value
+            merged_list.append([str_date_range, tmp_data_min])
+
+        elif merge_type == merge_max:  # if merge type is max
+            tmp_data_max = []  # temporaty data list to store the max values
+            for row in list_input:  # for row in list_input
+                if start_date <= row[date_index] <= end_date:  # if date in date range
+                    if start_date == row[date_index]:  # if start date equals to row_date
+                        tmp_data_max = raw_data(in_row=row)  # create the temporary list
+                    else:  # else
+                        tmp_raw_data = raw_data(in_row=row)  # create a temporary list to store row date
+                        for index in range(0, len(tmp_raw_data)):  # for index in range
+                            if tmp_raw_data[index] > tmp_data_max[index]:  # check if the new value is minimum
+                                tmp_data_max[index] = tmp_raw_data[index]  # set the value
+            merged_list.append([str_date_range, tmp_data_max])
+
+        elif merge_type == merge_mean:  # if merge type is mean
+            tmp_data_mean = tmp_zero_list.copy()  # temporaty data list to calculate the mean values
+            mean_counter = 0
+            for row in list_input:  # for row in list_input
+                if start_date <= row[date_index] <= end_date:  # if date in date range
+                    mean_counter += 1
+                    tmp_raw_data = raw_data(in_row=row)  # create a temporary list to store row date
+                    for index in range(0, len(tmp_raw_data)):  # for index in range
+                        tmp_data_mean[index] += tmp_raw_data[index]  # add the values
+                    # print(start_date, row[date_index], end_date, tmp_data_mean)
+            tmp_out_mean = [round(x / mean_counter, 1) for x in tmp_data_mean]
+            merged_list.append([str_date_range, tmp_out_mean])
+
+        elif merge_type == merge_median:  # if merge type is median
+            tmp_data_median = tmp_list_of_empty_lists.copy()  # temporaty data list to calculate the median values
+            for row in list_input:  # for row in list_input
+                if start_date <= row[date_index] <= end_date:  # if date in date range
+                    tmp_raw_data = raw_data(in_row=row)  # create a temporary list to store row date
+                    for index in range(0, len(tmp_raw_data)):  # for index in range
+                        tmp_data_median[index].append(tmp_raw_data[index])  # add the values
+            for index in range(0, len(tmp_data_median)):
+                tmp_data_median[index] = statistics.median(tmp_data_median[index])
+            merged_list.append([str_date_range, tmp_data_median])
+
+    return merged_list
 
 
 class MyCalendar:

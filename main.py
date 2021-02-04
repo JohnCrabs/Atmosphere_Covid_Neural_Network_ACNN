@@ -14,7 +14,7 @@ end_date = "2020-12-31"  # "YYYY-MM-DD"
 
 # Create period ster a multiple of week period (by week I dont mean Monday to Sunday necessary, but a 7 day in a row)
 period_alpha = 1
-period_step = period_alpha*7
+period_step = period_alpha * 7
 
 list_date_period_ranges = my_cal_v2.break_date_range_to_periods(date_start=start_date, date_end=end_date,
                                                                 period_step=period_step,
@@ -106,7 +106,6 @@ df_pollution_dataset = df_covid_measures[['COUNTRY', 'DATE', 'RESTRICTIONS_INTER
                                           'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
                                           'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']]
 
-
 df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCINATION_POLICY',
                                       'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
                                       'CONTINENT', 'TOTAL_CASES', 'NEW_CASES_SMOOTHED', 'TOTAL_DEATHS',
@@ -117,7 +116,7 @@ df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCI
                                       'WEEKLY_ICU_ADMISSIONS_PER_MILLION', 'WEEKLY_HOSP_ADMISSIONS',
                                       'WEEKLY_HOSP_ADMISSIONS_PER_MILLION', 'NEW_TESTS', 'TOTAL_TESTS',
                                       'TOTAL_TESTS_PER_THOUSAND', 'NEW_TESTS_PER_THOUSAND', 'NEW_TESTS_SMOOTHED',
-                                      'NEW_TESTS_SMOOTHED_PER_THOUSAND',  'POSITIVE_RATE', 'TESTS_PER_CASE',
+                                      'NEW_TESTS_SMOOTHED_PER_THOUSAND', 'POSITIVE_RATE', 'TESTS_PER_CASE',
                                       'TESTS_UNITS', 'TOTAL_VACCINATIONS', 'NEW_VACCINATIONS',
                                       'TOTAL_VACCINATIONS_PER_HUNDRED', 'NEW_VACCINATIONS_PER_MILLION', 'POPULATION',
                                       'POPULATION_DENSITY', 'MEDIAN_AGE', 'AGED_65_OLDER', 'AGED_70_OLDER',
@@ -128,9 +127,22 @@ df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCI
                                       'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES',
                                       'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']]
 
-
+df_pollution_dataset.fillna(method='ffill', inplace=True)
 df_polllution_dict = create_dictionary_from_list_column(list_input=df_pollution_dataset.values.tolist(),
                                                         key_column_index=0)
+
+# print(df_polllution_dict.keys())
+
+df_pollution_mean_range_dict = {}
+for key in df_polllution_dict.keys():
+    df_pollution_mean_range_dict[key] = []
+    df_pollution_mean_range_dict[key] = my_cal_v2.merge_values_in_date_range_list(
+        list_input=df_polllution_dict.copy()[key],
+        date_index=0,
+        date_range_list=list_date_period_ranges,
+        merge_type=my_cal_v2.merge_mean)
+
+    # print(key, df_pollution_mean_range_dict[key])
 
 # --------------------------------------------------- #
 # ---------- 3) Download Sentiner-5 Images ---------- #
@@ -146,12 +158,12 @@ if download_satellite_data:
                             'NO2_column_number_density']
     list_collection_names = ['ozone_O3_density', 'carbon_monoxide_CO_density', 'absorbing_aerosol_index',
                              'offline_formaldehyde_HCHO_density', 'sulphur_dioxide_SO2_density'
-                             'nitrogen_dioxide_NO2_density']
+                                                                  'nitrogen_dioxide_NO2_density']
 
     list_S5_data_len = len(list_collection_id)
     scale_m_per_px = 5000
     waiting_minute_multiplier = 5
-    waiting_time_in_sec = int(waiting_minute_multiplier)*60
+    waiting_time_in_sec = int(waiting_minute_multiplier) * 60
     for i in range(0, list_S5_data_len):
         my_gee.download_image_from_collection(collection_id=list_collection_id[i],
                                               image_band=list_colection_bands[i],
