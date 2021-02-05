@@ -3,6 +3,7 @@ import ee
 from my_lib import my_calendar_v2 as my_cal_v2
 import time
 
+# ee.Authenticate()
 ee.Initialize()
 
 
