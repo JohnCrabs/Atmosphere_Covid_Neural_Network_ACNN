@@ -7,7 +7,7 @@ from google_lib import my_gee
 # ---------- 1) Find Date Ranges ---------- #
 # ----------------------------------------- #
 
-download_satellite_data = False
+download_satellite_data = True
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
 end_date = "2020-12-31"  # "YYYY-MM-DD"
@@ -162,7 +162,7 @@ if download_satellite_data:
 
     list_S5_data_len = len(list_collection_id)
     scale_m_per_px = 5000
-    waiting_minute_multiplier = 5
+    waiting_minute_multiplier = 0
     waiting_time_in_sec = int(waiting_minute_multiplier) * 60
     # for i in range(0, list_S5_data_len):
     #     my_gee.download_image_from_collection(collection_id=list_collection_id[i],

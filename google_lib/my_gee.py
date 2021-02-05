@@ -69,11 +69,11 @@ def download_image_from_collection(collection_id, image_band, img_name, list_dat
             if waiting_time is not None:
                 is_timer = True
                 timer_value = waiting_time
-            while task.status()['state'] is 'READY':
+            while task.status()['state'] == 'READY':
                 if is_timer:
                     time.sleep(1)
                     timer_value -= 1
-                    if timer_value == 0:
+                    if timer_value <= 0:
                         break
 
             print("Task finished successfully!")
