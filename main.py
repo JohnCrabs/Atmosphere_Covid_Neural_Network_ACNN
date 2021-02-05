@@ -14,7 +14,7 @@ end_date = "2020-12-31"  # "YYYY-MM-DD"
 
 # Create period ster a multiple of week period (by week I dont mean Monday to Sunday necessary, but a 7 day in a row)
 period_alpha = 1
-period_step = period_alpha * 7
+period_step = period_alpha * 6
 
 list_date_period_ranges = my_cal_v2.break_date_range_to_periods(date_start=start_date, date_end=end_date,
                                                                 period_step=period_step,
@@ -164,11 +164,18 @@ if download_satellite_data:
     scale_m_per_px = 5000
     waiting_minute_multiplier = 5
     waiting_time_in_sec = int(waiting_minute_multiplier) * 60
-    for i in range(0, list_S5_data_len):
-        my_gee.download_image_from_collection(collection_id=list_collection_id[i],
-                                              image_band=list_colection_bands[i],
-                                              img_name=list_collection_names[i],
-                                              list_date_range=list_date_period_ranges,
-                                              list_countries=list_unique_countries,
-                                              scale=scale_m_per_px,
-                                              waiting_time=waiting_time_in_sec)
+    # for i in range(0, list_S5_data_len):
+    #     my_gee.download_image_from_collection(collection_id=list_collection_id[i],
+    #                                           image_band=list_colection_bands[i],
+    #                                           img_name=list_collection_names[i],
+    #                                           list_date_range=list_date_period_ranges,
+    #                                           list_countries=list_unique_countries,
+    #                                           scale=scale_m_per_px,
+    #                                           waiting_time=waiting_time_in_sec)
+    my_gee.download_image_from_collection(collection_id=list_collection_id[0],
+                                          image_band=list_colection_bands[0],
+                                          img_name=list_collection_names[0],
+                                          list_date_range=list_date_period_ranges,
+                                          list_countries=list_unique_countries,
+                                          scale=scale_m_per_px,
+                                          waiting_time=waiting_time_in_sec)
