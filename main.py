@@ -140,7 +140,10 @@ for key in df_polllution_dict.keys():
         list_input=df_polllution_dict.copy()[key],
         date_index=0,
         date_range_list=list_date_period_ranges,
-        merge_type=my_cal_v2.merge_mean)
+        merge_type=my_cal_v2.merge_mean,
+        del_input=my_cal_v2.del_dash,
+        del_output=my_cal_v2.del_none,
+        del_use=True)
 
     # print(key, df_pollution_mean_range_dict[key])
 

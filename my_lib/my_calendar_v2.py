@@ -532,7 +532,8 @@ def break_date_range_to_periods(date_start, date_end, period_step, date_format, 
     return date_range_list
 
 
-def merge_values_in_date_range_list(list_input: [], date_index: int, date_range_list: [], merge_type=merge_mean):
+def merge_values_in_date_range_list(list_input: [], date_index: int, date_range_list: [], merge_type=merge_mean,
+                                    del_input=del_slash, del_output=del_slash, del_use=False):
     import statistics
 
     def raw_data(in_row):
@@ -552,7 +553,9 @@ def merge_values_in_date_range_list(list_input: [], date_index: int, date_range_
     for date_range in date_range_list:  # for each date range
         start_date = date_range[0]  # set the start date
         end_date = date_range[1]  # set the end date
-        str_date_range = start_date + "__" + end_date  # create a sting with date range
+        str_date_range = start_date + "_" + end_date  # create a sting with date range
+        if del_use:  # if use del then create a sting with date range using the del_input and del_output
+            str_date_range = start_date.replace(del_input, del_output) + "_" + end_date.replace(del_input, del_output)
 
         if merge_type == merge_min:  # if merge type is min
             tmp_data_min = []  # temporaty data list to store the min values
