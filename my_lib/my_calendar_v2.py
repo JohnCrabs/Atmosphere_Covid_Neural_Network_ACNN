@@ -532,6 +532,15 @@ def break_date_range_to_periods(date_start, date_end, period_step, date_format, 
     return date_range_list
 
 
+def create_string_list_date_range(list_input: [], del_input=del_slash, del_output=del_slash):
+    output_list = []
+    for date_range in list_input:
+        start_date = date_range[0]
+        end_date = date_range[1]
+        output_list.append(start_date.replace(del_input, del_output) + "_" + end_date.replace(del_input, del_output))
+    return output_list
+
+
 def merge_values_in_date_range_list(list_input: [], date_index: int, date_range_list: [], merge_type=merge_mean,
                                     del_input=del_slash, del_output=del_slash, del_use=False):
     import statistics

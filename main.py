@@ -1,27 +1,44 @@
-import pandas as pd
-# import matplotlib.pyplot as plt
-from my_lib import my_calendar_v2 as my_cal_v2
-from google_lib import my_gee
+import pandas as pd  # import pandas for array processing
+import matplotlib.pyplot as plt  # import pyplot for figure plotting
+from my_lib import my_calendar_v2 as my_cal_v2  # import my calendar lib (for date anaysis)
+import my_lib.my_geo_img as my_geo_img  # import my_geo_img lib (for image processing)
+from google_lib import my_gee  # import my_gee lib (for satellite images)
+import time  # import time
+import os  # import os
+
+pd.options.mode.chained_assignment = None  # this line prevents an error of pd.fillna() function
 
 # ----------------------------------------- #
 # ---------- 1) Find Date Ranges ---------- #
 # ----------------------------------------- #
 
-download_satellite_data = True
+path_data_fig_plot = 'export_data/img_data_plots/'  # the path to export the figures
+path_sat_stats_data_fig_plot = 'export_data/img_sat_stats_plot/'  # the path to export the figures
+
+print_covid_country_plot_fig = False  # a flag for time saving purposes
+download_satellite_data = False  # a flag for time saving purposes
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
 end_date = "2020-12-31"  # "YYYY-MM-DD"
 
 # Create period ster a multiple of week period (by week I dont mean Monday to Sunday necessary, but a 7 day in a row)
-period_alpha = 1
-period_step = period_alpha * 6
+period_alpha = 1  # a multiplier for weeks
+period_step = period_alpha * 6  # the period step
 
+# Break the date range into smaller ranges
 list_date_period_ranges = my_cal_v2.break_date_range_to_periods(date_start=start_date, date_end=end_date,
                                                                 period_step=period_step,
                                                                 date_format=my_cal_v2.YYYY_MM_DD,
                                                                 date_delimeter=my_cal_v2.del_dash, century=21)
-# print(list_date_period_ranges)
 
+# Create a list with stings of the date range.
+# e.g. ['2020-01-01', '2020-01-07'] => '20200101_20200107'
+list_date_range_path_string = my_cal_v2.create_string_list_date_range(list_input=list_date_period_ranges,
+                                                                      del_input=my_cal_v2.del_dash,
+                                                                      del_output=my_cal_v2.del_none)
+
+# print(list_date_period_ranges)
+# print(list_date_range_path_string)
 
 # ------------------------------------------------- #
 # ---------- 3) Create Datasets From CSV ---------- #
@@ -67,31 +84,42 @@ list_date_period_ranges = my_cal_v2.break_date_range_to_periods(date_start=start
 
 
 def find_unique_values_list(list_input: []):
-    list_output = []
-    for item in list_input:
-        if item not in list_output:
-            list_output.append(item)
-    return list_output
+    """
+    Find the unique values in a list
+    :param list_input:
+    :return:
+    """
+    list_output = []  # create a temporary list output
+    for item in list_input:  # for each item in list input
+        if item not in list_output:  # if item is not in list output
+            list_output.append(item)  # append it to list_output
+    return list_output  # return the list output
 
 
 def create_dictionary_from_list_column(list_input: [], key_column_index: int):
-    dict_output = {}
-    for row in list_input:
-        if row[key_column_index] not in dict_output.keys():
-            dict_output[row[key_column_index]] = []
-        tmp_list = []
-        for index in range(0, len(row)):
-            if index != key_column_index:
-                tmp_list.append(row[index])
-        dict_output[row[key_column_index]].append(tmp_list)
-    return dict_output
+    """
+    create a dictionary from the list collumns
+    :param list_input:
+    :param key_column_index:
+    :return:
+    """
+    dict_output = {}  # create a dictionary for output
+    for row in list_input:  # for each row in list_input
+        if row[key_column_index] not in dict_output.keys():  # if value is not in dictionary (prevents destroy the list)
+            dict_output[row[key_column_index]] = []  # create a new dictionary with empty key
+        tmp_list = []  # create a temporary list (for append)
+        for func_index in range(0, len(row)):  # for func_index in range()
+            if func_index != key_column_index:  # if func_index is different than key_column_index (exclude this value)
+                tmp_list.append(row[func_index])  # append value to tmp_list
+        dict_output[row[key_column_index]].append(tmp_list)  # append the list to new list
+    return dict_output  # return the dictionary
 
 
-str_covid_measures_csv_path = "Data/covid_measures.csv"
-df_covid_measures = pd.read_csv(str_covid_measures_csv_path, low_memory=False)
+str_covid_measures_csv_path = "Data/covid_measures.csv"  # path to covid measure excel
+df_covid_measures = pd.read_csv(str_covid_measures_csv_path, low_memory=False)  # read the csv file
 # print(df_covid_measures.head())
 
-list_unique_countries = df_covid_measures.COUNTRY.unique()
+list_unique_countries = df_covid_measures.COUNTRY.unique()  # create a list with the countries included in list
 # print(list_unique_countries)
 # print(len(list_unique_countries))
 
@@ -101,11 +129,13 @@ list_unique_countries = df_covid_measures.COUNTRY.unique()
 #                                           'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS',
 #                                           'WORKPLACE_CLOSURES']]
 
+# Create the Dataframe to be used for training the pollution Neural Network
 df_pollution_dataset = df_covid_measures[['COUNTRY', 'DATE', 'RESTRICTIONS_INTERNAL_MOVEMENTS',
                                           'INTERNATIONAL_TRAVEL_CONTROLS', 'CANCEL_PUBLIC_EVENTS',
                                           'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
                                           'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']]
 
+# Create the Dataframe to be used for training the covid Neural Network
 df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCINATION_POLICY',
                                       'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
                                       'CONTINENT', 'TOTAL_CASES', 'NEW_CASES_SMOOTHED', 'TOTAL_DEATHS',
@@ -127,25 +157,61 @@ df_covid_dataset = df_covid_measures[['COUNTRY', 'ID', 'CONTACT_TRACING', 'VACCI
                                       'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES',
                                       'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']]
 
+# Create a list of headers for (used later for the final array)
+df_pollution_data_header = ['DATE_RANGE', 'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+                            'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+                            'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']
+
+# df_x_plot and df_y_plot used to export plots (for data visualization)
+df_x_plot = 'DATE_RANGE'
+df_y_plot = ['RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+             'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+             'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']
+
+# fillna
 df_pollution_dataset.fillna(method='ffill', inplace=True)
+# create a dictionary from the list (using the countries as a key column)
 df_polllution_dict = create_dictionary_from_list_column(list_input=df_pollution_dataset.values.tolist(),
                                                         key_column_index=0)
 
 # print(df_polllution_dict.keys())
+if print_covid_country_plot_fig:
+    df_pollution_mean_range_dict = {}
+    for key in df_polllution_dict.keys():
+        df_pollution_mean_range_dict[key] = []
+        df_pollution_mean_range_dict[key] = my_cal_v2.merge_values_in_date_range_list(
+            list_input=df_polllution_dict.copy()[key],
+            date_index=0,
+            date_range_list=list_date_period_ranges,
+            merge_type=my_cal_v2.merge_mean,
+            del_input=my_cal_v2.del_dash,
+            del_output=my_cal_v2.del_none,
+            del_use=True)
 
-df_pollution_mean_range_dict = {}
-for key in df_polllution_dict.keys():
-    df_pollution_mean_range_dict[key] = []
-    df_pollution_mean_range_dict[key] = my_cal_v2.merge_values_in_date_range_list(
-        list_input=df_polllution_dict.copy()[key],
-        date_index=0,
-        date_range_list=list_date_period_ranges,
-        merge_type=my_cal_v2.merge_mean,
-        del_input=my_cal_v2.del_dash,
-        del_output=my_cal_v2.del_none,
-        del_use=True)
+        # print(key, df_pollution_mean_range_dict[key])
 
-    # print(key, df_pollution_mean_range_dict[key])
+    df_pollution_mean_range_dict_with_headers = {}
+    for key in df_pollution_mean_range_dict.keys():
+        df_pollution_mean_range_dict_with_headers[key] = []
+        for dataset_index in range(0, len(df_pollution_mean_range_dict[key])):
+            tmp_dataset_list = [df_pollution_mean_range_dict[key][dataset_index][0]]
+            for value in df_pollution_mean_range_dict[key][dataset_index][1]:
+                tmp_dataset_list.append(value)
+            df_pollution_mean_range_dict_with_headers[key].append(tmp_dataset_list)
+        df_pollution_mean_range_dict_with_headers[key] = pd.DataFrame(df_pollution_mean_range_dict_with_headers[key],
+                                                                      columns=df_pollution_data_header)
+        df_pollution_mean_range_dict_with_headers[key].plot(x=df_x_plot, y=df_y_plot)
+        plt.gcf().set_size_inches(20.48, 10.24)
+        plt.xticks(rotation=90)
+        plt.xlim(0, 53)
+        plt.ylim(0, 6)
+        plt.title(key)
+        plt.xlabel('Date_Range')
+        plt.ylabel('Covid Measures')
+        plt.xticks(range(0, 52))
+        plt.savefig(path_data_fig_plot + key + ".png", dpi=100)
+        time.sleep(1)
+        print("Plot " + key + " exported")
 
 # --------------------------------------------------- #
 # ---------- 3) Download Sentiner-5 Images ---------- #
@@ -160,7 +226,7 @@ if download_satellite_data:
                             'tropospheric_HCHO_column_number_density', 'SO2_column_number_density',
                             'NO2_column_number_density']
     list_collection_names = ['ozone_O3_density', 'carbon_monoxide_CO_density', 'absorbing_aerosol_index',
-                             'offline_formaldehyde_HCHO_density', 'sulphur_dioxide_SO2_density'
+                             'offline_formaldehyde_HCHO_density', 'sulphur_dioxide_SO2_density',
                                                                   'nitrogen_dioxide_NO2_density']
 
     list_S5_data_len = len(list_collection_id)
@@ -175,10 +241,57 @@ if download_satellite_data:
     #                                           list_countries=list_unique_countries,
     #                                           scale=scale_m_per_px,
     #                                           waiting_time=waiting_time_in_sec)
-    my_gee.download_image_from_collection(collection_id=list_collection_id[0],
-                                          image_band=list_colection_bands[0],
-                                          img_name=list_collection_names[0],
+    my_gee.download_image_from_collection(collection_id=list_collection_id[5],
+                                          image_band=list_colection_bands[5],
+                                          img_name=list_collection_names[5],
                                           list_date_range=list_date_period_ranges,
                                           list_countries=list_unique_countries,
                                           scale=scale_m_per_px,
                                           waiting_time=waiting_time_in_sec)
+
+# ----------------------------------------------- #
+# ---------- 4) Read Sentiner-5 Images ---------- #
+# ----------------------------------------------- #
+
+pollution_statistic_header = ['DATE_RANGE', 'MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN']
+pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
+
+img_path_folder = "Data/Satellite_Atmospheric_Images/GEE_Greece/"
+img_path_files = os.listdir(img_path_folder)
+
+dict_pollution_stats = {}
+for keyword in pollution_keywords_in_path:
+    dict_pollution_stats[keyword] = []
+    for date_range in list_date_range_path_string:
+        for path_file in img_path_files:
+            if keyword in path_file and date_range in path_file:
+                img = my_geo_img.open_image(img_path_folder + path_file)
+                img_stats = my_geo_img.img_statistics(img, round_at=5)
+
+                tmp_stats_list = [date_range,
+                                  img_stats[my_geo_img.MY_GEO_MIN],
+                                  img_stats[my_geo_img.MY_GEO_MAX],
+                                  img_stats[my_geo_img.MY_GEO_MEAN],
+                                  img_stats[my_geo_img.MY_GEO_STD_DEV],
+                                  img_stats[my_geo_img.MY_GEO_MEDIAN]]
+
+                dict_pollution_stats[keyword].append(tmp_stats_list)
+    df_pollution_stats = pd.DataFrame(dict_pollution_stats[keyword], columns=pollution_statistic_header)
+    df_pollution_stats.plot(x=df_x_plot, y=['MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN'])
+    plt.gcf().set_size_inches(20.48, 10.24)
+    plt.xticks(rotation=90)
+    # plt.xlim(0, 6)
+    # plt.ylim(0, 6)
+    plt.title(keyword)
+    plt.xlabel('Date_Range')
+    plt.ylabel('Density')
+    # plt.xticks(range(0, 6))
+    plt.savefig(path_sat_stats_data_fig_plot + keyword + ".png", dpi=100)
+    time.sleep(1)
+    print("Plot " + keyword + " exported")
+
+# print(dict_pollution_stats)
+
+# img = geo_img.open_image(img_path)
+# img_stats = geo_img.img_statistics(img, round_at=5)
+# print(img_stats)

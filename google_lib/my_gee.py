@@ -3,23 +3,62 @@ import ee
 from my_lib import my_calendar_v2 as my_cal_v2
 import time
 
-# ee.Authenticate()
-ee.Initialize()
+
+try:
+    ee.Initialize()
+except:
+    ee.Authenticate()
+    ee.Initialize()
+
+# --------------------------------- #
+# ---------- CLEAR TASKS ---------- #
+# --------------------------------- #
 
 
-def clear_tasks():
-    operation_list = ee.batch.data.listOperations()
+def clear_task_by_name(task_name: str):
+    ee.batch.data.cancelOperation(task_name)  # cancel the task
+
+
+def clear_all_tasks():
+    """
+    Clear all tasks with status "READY"
+    :return:
+    """
+    operation_list = ee.batch.data.listOperations()  # Create a list of tasks
+    clear_tasks_in_list(operation_list)
+
+
+def clear_tasks_in_list(task_list):
+    """
+    Call this functiont to clear all google earth engine tasks
+    :return: Nothing
+    """
     # print(operation_list)
-    index = 1
-    list_len = len(operation_list)
-    for operation in operation_list:
-        print("(" + str(index) + "/" + str(list_len) + ") Cancel operation: " + operation['name'])
-        ee.batch.data.cancelOperation(operation['name'])
-        index += 1
+    index = 1  # Create an index and set it to 1 (first task) - I use this to keep track of task cancelation
+    list_len = len(task_list)  # Find the length of the task list
+    for operation in task_list:  # for all tasks
+        print("(" + str(index) + "/" + str(list_len) + ") Cancel operation: " + operation['name'])  # print message
+        clear_task_by_name(operation['name']) # cancel the task
+        index += 1  # increase the index by 1
 
+
+# ------------------------------ #
+# ---------- DOWNLOAD ---------- #
+# ------------------------------ #
 
 def download_image_from_collection(collection_id, image_band, img_name, list_date_range, list_countries, scale=5000,
                                    waiting_time=None):
+    """
+    Download Images from an ee.ImageCollection()
+    :param collection_id:
+    :param image_band:
+    :param img_name:
+    :param list_date_range:
+    :param list_countries:
+    :param scale:
+    :param waiting_time:
+    :return:
+    """
     country_collection = ee.FeatureCollection('users/midekisa/Countries')  # add countries boundary geometries
     for country in list_countries:
         print("\nCreate boundary geometry for  " + country)
