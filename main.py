@@ -12,10 +12,11 @@ pd.options.mode.chained_assignment = None  # this line prevents an error of pd.f
 # ---------- 1) Find Date Ranges ---------- #
 # ----------------------------------------- #
 
-path_data_fig_plot = 'export_data/img_data_plots/'  # the path to export the figures
-path_sat_stats_data_fig_plot = 'export_data/img_sat_stats_plot/'  # the path to export the figures
+# path_data_fig_plot = 'export_data/img_data_plots/'  # the path to export the figures
+# path_sat_stats_data_fig_plot = 'export_data/img_sat_stats_plot/'  # the path to export the figures
+path_for_saving_plots = 'export_data/figure_plots/'
 
-print_covid_country_plot_fig = False  # a flag for time saving purposes
+print_covid_country_plot_fig = True  # a flag for time saving purposes
 download_satellite_data = False  # a flag for time saving purposes
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
@@ -120,6 +121,9 @@ df_covid_measures = pd.read_csv(str_covid_measures_csv_path, low_memory=False)  
 # print(df_covid_measures.head())
 
 list_unique_countries = df_covid_measures.COUNTRY.unique()  # create a list with the countries included in list
+list_unique_countries_for_path = []
+for country in list_unique_countries:
+    list_unique_countries_for_path.append(country.replace(" ", "_"))
 # print(list_unique_countries)
 # print(len(list_unique_countries))
 
@@ -175,11 +179,12 @@ df_polllution_dict = create_dictionary_from_list_column(list_input=df_pollution_
                                                         key_column_index=0)
 
 # print(df_polllution_dict.keys())
+df_pollution_mean_range_dict = {}
+df_pollution_mean_range_dict_with_headers = {}
 if print_covid_country_plot_fig:
-    df_pollution_mean_range_dict = {}
     for key in df_polllution_dict.keys():
-        df_pollution_mean_range_dict[key] = []
-        df_pollution_mean_range_dict[key] = my_cal_v2.merge_values_in_date_range_list(
+        df_pollution_mean_range_dict[key.replace(' ', '_')] = []
+        df_pollution_mean_range_dict[key.replace(' ', '_')] = my_cal_v2.merge_values_in_date_range_list(
             list_input=df_polllution_dict.copy()[key],
             date_index=0,
             date_range_list=list_date_period_ranges,
@@ -190,17 +195,20 @@ if print_covid_country_plot_fig:
 
         # print(key, df_pollution_mean_range_dict[key])
 
-    df_pollution_mean_range_dict_with_headers = {}
     for key in df_pollution_mean_range_dict.keys():
-        df_pollution_mean_range_dict_with_headers[key] = []
+        path_to_export_plot_png = path_for_saving_plots + key + '/'
+        if not os.path.exists(path_to_export_plot_png):
+            os.mkdir(path_to_export_plot_png)
+        df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')] = []
         for dataset_index in range(0, len(df_pollution_mean_range_dict[key])):
             tmp_dataset_list = [df_pollution_mean_range_dict[key][dataset_index][0]]
             for value in df_pollution_mean_range_dict[key][dataset_index][1]:
                 tmp_dataset_list.append(value)
-            df_pollution_mean_range_dict_with_headers[key].append(tmp_dataset_list)
-        df_pollution_mean_range_dict_with_headers[key] = pd.DataFrame(df_pollution_mean_range_dict_with_headers[key],
-                                                                      columns=df_pollution_data_header)
-        df_pollution_mean_range_dict_with_headers[key].plot(x=df_x_plot, y=df_y_plot)
+            df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')].append(tmp_dataset_list)
+        df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')] = pd.DataFrame(
+            df_pollution_mean_range_dict_with_headers[key],
+            columns=df_pollution_data_header)
+        df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')].plot(x=df_x_plot, y=df_y_plot)
         plt.gcf().set_size_inches(20.48, 10.24)
         plt.xticks(rotation=90)
         plt.xlim(0, 53)
@@ -209,7 +217,7 @@ if print_covid_country_plot_fig:
         plt.xlabel('Date_Range')
         plt.ylabel('Covid Measures')
         plt.xticks(range(0, 52))
-        plt.savefig(path_data_fig_plot + key + ".png", dpi=100)
+        plt.savefig(path_to_export_plot_png + key.replace(' ', '_') + "_covid_measures.png", dpi=100)
         time.sleep(1)
         print("Plot " + key + " exported")
 
@@ -227,7 +235,7 @@ if download_satellite_data:
                             'NO2_column_number_density']
     list_collection_names = ['ozone_O3_density', 'carbon_monoxide_CO_density', 'absorbing_aerosol_index',
                              'offline_formaldehyde_HCHO_density', 'sulphur_dioxide_SO2_density',
-                                                                  'nitrogen_dioxide_NO2_density']
+                             'nitrogen_dioxide_NO2_density']
 
     list_S5_data_len = len(list_collection_id)
     scale_m_per_px = 5000
@@ -253,45 +261,89 @@ if download_satellite_data:
 # ---------- 4) Read Sentiner-5 Images ---------- #
 # ----------------------------------------------- #
 
+df_satelite_image_data_dict = {}
+tmp_test_country = ['Greece']
 pollution_statistic_header = ['DATE_RANGE', 'MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN']
-pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
+pollution_keywords_in_path = ['carbon_monoxide', 'ozone', "sulphur_dioxide", "nitrogen_dioxide"]
+if print_covid_country_plot_fig:
+    img_path_folder = "Data/Satellite_Atmospheric_Images/tiff_folders/GEE_"
 
-img_path_folder = "Data/Satellite_Atmospheric_Images/GEE_Greece/"
-img_path_files = os.listdir(img_path_folder)
+    for country in list_unique_countries_for_path:
+        # for country in tmp_test_country:
+        tmp_img_path_folder = img_path_folder + country + "/"
+        img_path_files = os.listdir(tmp_img_path_folder)
 
-dict_pollution_stats = {}
-for keyword in pollution_keywords_in_path:
-    dict_pollution_stats[keyword] = []
-    for date_range in list_date_range_path_string:
-        for path_file in img_path_files:
-            if keyword in path_file and date_range in path_file:
-                img = my_geo_img.open_image(img_path_folder + path_file)
-                img_stats = my_geo_img.img_statistics(img, round_at=5)
+        path_to_export_plot_png = path_for_saving_plots + country + '/'
+        if not os.path.exists(path_to_export_plot_png):
+            os.mkdir(path_to_export_plot_png)
 
-                tmp_stats_list = [date_range,
-                                  img_stats[my_geo_img.MY_GEO_MIN],
-                                  img_stats[my_geo_img.MY_GEO_MAX],
-                                  img_stats[my_geo_img.MY_GEO_MEAN],
-                                  img_stats[my_geo_img.MY_GEO_STD_DEV],
-                                  img_stats[my_geo_img.MY_GEO_MEDIAN]]
+        dict_pollution_stats = {}
+        for keyword in pollution_keywords_in_path:
+            dict_pollution_stats[keyword] = []
+            for date_range in list_date_range_path_string:
+                for path_file in img_path_files:
+                    if keyword in path_file and date_range in path_file:
+                        img = my_geo_img.open_image(tmp_img_path_folder + path_file)
+                        img_stats = my_geo_img.img_statistics(img, round_at=5)
 
-                dict_pollution_stats[keyword].append(tmp_stats_list)
-    df_pollution_stats = pd.DataFrame(dict_pollution_stats[keyword], columns=pollution_statistic_header)
-    df_pollution_stats.plot(x=df_x_plot, y=['MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN'])
-    plt.gcf().set_size_inches(20.48, 10.24)
-    plt.xticks(rotation=90)
-    # plt.xlim(0, 6)
-    # plt.ylim(0, 6)
-    plt.title(keyword)
-    plt.xlabel('Date_Range')
-    plt.ylabel('Density')
-    # plt.xticks(range(0, 6))
-    plt.savefig(path_sat_stats_data_fig_plot + keyword + ".png", dpi=100)
-    time.sleep(1)
-    print("Plot " + keyword + " exported")
+                        tmp_stats_list = [date_range,
+                                          img_stats[my_geo_img.MY_GEO_MIN],
+                                          img_stats[my_geo_img.MY_GEO_MAX],
+                                          img_stats[my_geo_img.MY_GEO_MEAN],
+                                          img_stats[my_geo_img.MY_GEO_STD_DEV],
+                                          img_stats[my_geo_img.MY_GEO_MEDIAN]]
+
+                        dict_pollution_stats[keyword].append(tmp_stats_list)
+            df_pollution_stats = pd.DataFrame(dict_pollution_stats[keyword], columns=pollution_statistic_header)
+            df_pollution_stats.plot(x=df_x_plot, y=['MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN'])
+            plt.gcf().set_size_inches(20.48, 10.24)
+            plt.xticks(rotation=90)
+            plt.xlim(0, 53)
+            # plt.ylim(0, 6)
+            plt.title(country + "_" + keyword + "_" + "density")
+            plt.xlabel('Date_Range')
+            plt.ylabel('Density')
+            plt.xticks(range(0, 53))
+            plt.savefig(path_to_export_plot_png + country + "_" + keyword + ".png", dpi=100)
+            time.sleep(1)
+            print("Plot " + country + " " + keyword + " exported")
+            df_satelite_image_data_dict[country] = dict_pollution_stats.copy()
 
 # print(dict_pollution_stats)
 
 # img = geo_img.open_image(img_path)
 # img_stats = geo_img.img_statistics(img, round_at=5)
 # print(img_stats)
+
+# --------------------------------------------- #
+# ---------- 5) Create Exporting CSV ---------- #
+# --------------------------------------------- #
+
+# print(df_pollution_mean_range_dict)
+# print(df_satelite_image_data_dict)
+csv_output_list = [['COUNTRY', 'DATE_RANGE', 'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+                    'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES',
+                    'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES', 'CARBON_MONOOXIDE_MAX', 'CARBON_MONOOXIDE_MIN',
+                    'CARBON_MONOOXIDE_MEAN', 'CARBON_MONOOXIDE_STDDEV', 'CARBON_MONOOXIDE_MEDIAN', 'OZONE_MAX',
+                    'OZONE_MIN', 'OZONE_MEAN', 'OZONE_STDDEV', 'OZONE_MEDIAN', 'SULPHUR_DIOXIDE_MAX',
+                    'SULPHUR_DIOXIDE_MIN', 'SULPHUR_DIOXIDE_MEAN', 'SULPHUR_DIOXIDE_STDDEV', 'SULPHUR_DIOXIDE_MEDIAN',
+                    'NITROGEN_DIOXIDE_MAX', 'NITROGEN_DIOXIDE_MIN', 'NITROGEN_DIOXIDE_MEAN', 'NITROGEN_DIOXIDE_STDDEV',
+                    'NITROGEN_DIOXIDE_MEDIAN']]
+
+for country in list_unique_countries_for_path:
+    # for country in tmp_test_country:
+    for date_range in list_date_range_path_string:
+        tmp_append_list = [country, date_range]
+        for row in df_pollution_mean_range_dict[country]:
+            if row[0] == date_range:
+                for value in row[1]:
+                    tmp_append_list.append(value)
+        for key in pollution_keywords_in_path:
+            for row in df_satelite_image_data_dict[country][key]:
+                if date_range in row:
+                    for index in range(1, len(row)):
+                        tmp_append_list.append(row[index])
+        csv_output_list.append(tmp_append_list)
+
+csv_path = "export_data/acnn_data.csv"
+my_cal_v2.write_csv(csv_path=csv_path, list_write=csv_output_list, delimeter=my_cal_v2.del_comma)

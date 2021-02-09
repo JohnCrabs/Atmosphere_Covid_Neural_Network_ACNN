@@ -14,7 +14,7 @@ def mean_calculate(x, y):
 
 
 def open_image(path: str):
-    print(path)
+    # print(path)
     return gdal.Open(path).ReadAsArray()
 
 
