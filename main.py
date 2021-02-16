@@ -354,6 +354,13 @@ if download_satellite_data:
 # ---------- 4) Break Satelite Images to Tiles ---------- #
 # ------------------------------------------------------- #
 
+
+def clear_tile_files(path):
+    import shutil
+    list_dir = os.listdir(path)
+    for dir in list_dir:
+        shutil.rmtree(path + dir)
+
 if break_images_to_tiles:
     img_path_folder = "Data/Satellite_Atmospheric_Images/tiff_folders/GEE_"
     # pollution_keywords_in_path = ['carbon_monoxide', 'ozone', "sulphur_dioxide", "nitrogen_dioxide"]
