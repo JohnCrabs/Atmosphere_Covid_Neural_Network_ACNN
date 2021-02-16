@@ -1,6 +1,7 @@
 import gdal
 import numpy as np
 import math
+import cv2 as cv
 
 MY_GEO_MIN = 'min'
 MY_GEO_MAX = 'max'
@@ -15,7 +16,7 @@ def mean_calculate(x, y):
 
 def open_image(path: str):
     # print(path)
-    return gdal.Open(path).ReadAsArray()
+    return np.nan_to_num(gdal.Open(path).ReadAsArray(), nan=-1.0)
 
 
 def img_statistics(img: [], round_at=3):
@@ -60,3 +61,26 @@ def img_statistics(img: [], round_at=3):
             MY_GEO_MEAN: round(mean_px, round_at),
             MY_GEO_STD_DEV: round(std_dev, round_at),
             MY_GEO_MEDIAN: round(median_px, round_at)}
+
+
+def img_break_tiles(img: [], tile_size=10):
+    img *= 255.0 / img.max()
+    img_y_size, img_x_size = img.shape
+    tmp_export_tiles = []
+    for row_index in range(0, img_y_size, tile_size):
+        for column_index in range(0, img_x_size, tile_size):
+            tmp_export_tiles.append(img[row_index:row_index+tile_size, column_index:column_index+tile_size])
+
+    return tmp_export_tiles
+
+
+def img_break_tiles_and_export_them(img: [], folder_path, export_name, tile_size=10,  suffix='.png'):
+    img *= 255.0 / img.max()
+    img_y_size, img_x_size = img.shape
+    export_index = 0
+    for row_index in range(0, img_y_size, tile_size):
+        for column_index in range(0, img_x_size, tile_size):
+            cv.imwrite(folder_path + export_name + '_size_' + str(tile_size) + 'x' str(tile_size) + '_'
+                                                                                   + str(export_index) + suffix,
+                       img[row_index:row_index + tile_size, column_index:column_index + tile_size])
+            export_index += 1
