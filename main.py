@@ -14,12 +14,21 @@ pd.options.mode.chained_assignment = None  # this line prevents an error of pd.f
 
 # path_data_fig_plot = 'export_data/img_data_plots/'  # the path to export the figures
 # path_sat_stats_data_fig_plot = 'export_data/img_sat_stats_plot/'  # the path to export the figures
+tile_size = 32
 path_for_saving_plots = 'export_data/figure_plots/'
-path_for_saving_tiles = 'D:/Documents/Didaktoriko/ACNN/export_data/figure_tiles/'
+path_for_saving_tiles = 'D:/Documents/Didaktoriko/ACNN/export_data/figure_tiles_' + str(tile_size) + 'x' + str(
+    tile_size) + '/'
+if not os.path.exists(path_for_saving_tiles):
+    os.makedirs(path_for_saving_tiles)
+path_for_saving_dx_tiles = 'D:/Documents/Didaktoriko/ACNN/export_data/figure_dtiles_' + str(tile_size) + 'x' + str(
+    tile_size) + '/'
+if not os.path.exists(path_for_saving_dx_tiles):
+    os.makedirs(path_for_saving_dx_tiles)
 
-print_covid_country_plot_fig = True  # a flag for time saving purposes
-download_satellite_data = False  # a flag for time saving purposes
-break_images_to_tiles = True
+flag_print_covid_country_plot_fig = False  # a flag for time saving purposes
+flag_download_satellite_data = False  # a flag for time saving purposes
+flag_break_images_to_tiles = True  # a flag for time saving purposes
+flag_find_dx_between_images = True  # a flag for time saving purposes
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
 end_date = "2020-12-31"  # "YYYY-MM-DD"
@@ -84,6 +93,15 @@ list_date_range_path_string = my_cal_v2.create_string_list_date_range(list_input
 # STAY_HOME_REQUIREMENTS: Covid, Pollution
 # WORKPLACE_CLOSURES: Covid, Pollution
 '''
+
+
+def clear_dir_files(path):
+    import shutil
+    if os.path.exists(path):
+        list_dir = os.listdir(path)
+        for dir_ in list_dir:
+            print("Removing " + path + dir_)
+            shutil.rmtree(path + dir_)
 
 
 def find_unique_values_list(list_input: []):
@@ -183,7 +201,7 @@ df_polllution_dict = create_dictionary_from_list_column(list_input=df_pollution_
 # print(df_polllution_dict.keys())
 df_pollution_mean_range_dict = {}
 df_pollution_mean_range_dict_with_headers = {}
-if print_covid_country_plot_fig:
+if flag_print_covid_country_plot_fig:
     for key in df_polllution_dict.keys():
         df_pollution_mean_range_dict[key.replace(' ', '_')] = []
         df_pollution_mean_range_dict[key.replace(' ', '_')] = my_cal_v2.merge_values_in_date_range_list(
@@ -228,7 +246,7 @@ if print_covid_country_plot_fig:
 # --------------------------------------------------- #
 
 # my_gee.clear_tasks()
-if download_satellite_data:
+if flag_download_satellite_data:
     list_collection_id = ['COPERNICUS/S5P/OFFL/L3_O3', 'COPERNICUS/S5P/OFFL/L3_CO', 'COPERNICUS/S5P/OFFL/L3_AER_AI',
                           'COPERNICUS/S5P/OFFL/L3_HCHO', 'COPERNICUS/S5P/OFFL/L3_SO2',
                           'COPERNICUS/S5P/OFFL/L3_NO2']
@@ -260,7 +278,7 @@ if download_satellite_data:
                                           waiting_time=waiting_time_in_sec)
 
 # # ----------------------------------------------- #
-# # ---------- 4) Read Sentiner-5 Images ---------- #
+# # ---------- 4a) Read Sentiner-5 Images ---------- #
 # # ----------------------------------------------- #
 #
 # df_satelite_image_data_dict = {}
@@ -318,7 +336,7 @@ if download_satellite_data:
 # # print(img_stats)
 #
 # # --------------------------------------------- #
-# # ---------- 5) Create Exporting CSV ---------- #
+# # ---------- 5a) Create Exporting CSV ---------- #
 # # --------------------------------------------- #
 #
 # print(df_pollution_mean_range_dict)
@@ -351,35 +369,82 @@ if download_satellite_data:
 # my_cal_v2.write_csv(csv_path=csv_path, list_write=csv_output_list, delimeter=my_cal_v2.del_comma)
 
 # ------------------------------------------------------- #
-# ---------- 4) Break Satelite Images to Tiles ---------- #
+# ---------- 4b) Break Satelite Images to Tiles ---------- #
 # ------------------------------------------------------- #
 
-
-def clear_tile_files(path):
-    import shutil
-    list_dir = os.listdir(path)
-    for dir in list_dir:
-        shutil.rmtree(path + dir)
-
-if break_images_to_tiles:
+if flag_break_images_to_tiles:
+    clear_dir_files(path_for_saving_tiles)
+    print()
     img_path_folder = "Data/Satellite_Atmospheric_Images/tiff_folders/GEE_"
     # pollution_keywords_in_path = ['carbon_monoxide', 'ozone', "sulphur_dioxide", "nitrogen_dioxide"]
     pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
+    pollution_dict_min_max_values = {'carbon_monoxide': {'min': 0.00, 'max': 0.10},
+                                     'ozone': {'min': 0.10, 'max': 0.18}}
+    country_index = 1
     for country in list_unique_countries_for_path:
-        print('Exporting tiles for ' + country)
+        print('(' + str(country_index) + ' / ' + str(len(list_unique_countries_for_path))
+              + ') Exporting tiles for ' + country)
+        country_index += 1
         tmp_img_path_folder = img_path_folder + country + "/"
         img_path_files = os.listdir(tmp_img_path_folder)
         path_to_export_tile_png = path_for_saving_tiles + country + '/'
-        if not os.path.exists(path_to_export_plot_png):
-            os.mkdir(path_to_export_plot_png)
+        if not os.path.exists(path_to_export_tile_png):
+            os.mkdir(path_to_export_tile_png)
         for keyword in pollution_keywords_in_path:
             for date_range in list_date_range_path_string:
                 for path_file in img_path_files:
                     if keyword in path_file and date_range in path_file:
                         # print(tmp_img_path_folder + path_file)
-                        img = my_geo_img.open_image(tmp_img_path_folder + path_file)
+                        img = my_geo_img.open_geospatial_image_file(tmp_img_path_folder + path_file)
                         my_geo_img.img_break_tiles_and_export_them(img=img,
-                                                                   tile_size=32,
+                                                                   tile_size=tile_size,
                                                                    folder_path=path_to_export_tile_png,
-                                                                   export_name=country+'_'+keyword+'_'+date_range)
+                                                                   export_name=country + '_' + keyword + '_' + date_range,
+                                                                   norm_min_value=
+                                                                   pollution_dict_min_max_values[keyword]['min'],
+                                                                   normalize_max_value=
+                                                                   pollution_dict_min_max_values[keyword]['max'],
+                                                                   info_acc_percent=0.6)
 
+# -------------------------------------------------------- #
+# ---------- 5b) Break Satelite Images to Tiles ---------- #
+# -------------------------------------------------------- #
+
+if flag_find_dx_between_images:
+    print()
+    pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
+
+    import_img_path_folder = path_for_saving_tiles
+
+    clear_dir_files(path_for_saving_dx_tiles)
+    for country in list_unique_countries:
+        print()
+        print('Exporting Dtiles for ' + country)
+        export_dir_path = path_for_saving_dx_tiles + country + '/'
+        if not os.path.exists(export_dir_path):
+            os.makedirs(export_dir_path)
+
+        dict_with_dtile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
+            list_img_path_dir=import_img_path_folder + country + '/',
+            list_pollution=pollution_keywords_in_path,
+            list_date_range=list_date_range_path_string)
+        for key in dict_with_dtile_paths.keys():
+            for i in range(0, len(dict_with_dtile_paths[key])):
+                d_date_range_path = dict_with_dtile_paths[key][i]
+                d_date_range = dict_week_start_end_ranges[key][i]
+                export_index = dict_export_index[key][i]
+
+                # Uncomment for debugging
+                # print()
+                # print(dict_with_dtile_paths[key][i])
+                # print(dict_week_start_end_ranges[key][i])
+                # print(dict_export_index[key][i])
+
+                img_now = my_geo_img.open_image_file(d_date_range_path[0])
+                img_next = my_geo_img.open_image_file(d_date_range_path[1])
+                dtile_img = img_next - img_now
+                export_img_path = (export_dir_path + country + '_' + key + '_' + d_date_range[0] + '_' + d_date_range[1] +
+                                   '_size_' + str(tile_size) + 'x' + str(tile_size) +
+                                   '_tile_id_' + str(export_index) + '.png')
+
+                my_geo_img.export_image_file(export_img_path, dtile_img)
