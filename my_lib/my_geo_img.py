@@ -22,8 +22,8 @@ def open_geospatial_image_file(path: str):
     return np.array(gdal.Open(path).ReadAsArray())
 
 
-def open_image_file(path: str):
-    return cv.imread(path)
+def open_image_file(path: str, read_id=0):
+    return cv.imread(path, read_id)
 
 
 def export_image_file(path: str, img):

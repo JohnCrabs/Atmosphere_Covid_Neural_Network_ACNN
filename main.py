@@ -5,12 +5,21 @@ import my_lib.my_geo_img as my_geo_img  # import my_geo_img lib (for image proce
 from google_lib import my_gee  # import my_gee lib (for satellite images)
 import time  # import time
 import os  # import os
+import numpy as np
+import test_uNet as my_uNet
 
 pd.options.mode.chained_assignment = None  # this line prevents an error of pd.fillna() function
+
 
 # ----------------------------------------- #
 # ---------- 1) Find Date Ranges ---------- #
 # ----------------------------------------- #
+
+
+def check_create_folders_in_path(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 
 # path_data_fig_plot = 'export_data/img_data_plots/'  # the path to export the figures
 # path_sat_stats_data_fig_plot = 'export_data/img_sat_stats_plot/'  # the path to export the figures
@@ -18,17 +27,21 @@ tile_size = 32
 path_for_saving_plots = 'export_data/figure_plots/'
 path_for_saving_tiles = 'D:/Documents/Didaktoriko/ACNN/export_data/figure_tiles_' + str(tile_size) + 'x' + str(
     tile_size) + '/'
-if not os.path.exists(path_for_saving_tiles):
-    os.makedirs(path_for_saving_tiles)
+check_create_folders_in_path(path_for_saving_tiles)
 path_for_saving_dx_tiles = 'D:/Documents/Didaktoriko/ACNN/export_data/figure_dtiles_' + str(tile_size) + 'x' + str(
     tile_size) + '/'
-if not os.path.exists(path_for_saving_dx_tiles):
-    os.makedirs(path_for_saving_dx_tiles)
+check_create_folders_in_path(path_for_saving_dx_tiles)
+
+export_model_path = 'export_data/uNet/export_model/'
+check_create_folders_in_path(export_model_path)
+export_model_name_path = 'export_data/uNet/export_model_name/'
+check_create_folders_in_path(export_model_name_path)
 
 flag_print_covid_country_plot_fig = False  # a flag for time saving purposes
 flag_download_satellite_data = False  # a flag for time saving purposes
-flag_break_images_to_tiles = True  # a flag for time saving purposes
-flag_find_dx_between_images = True  # a flag for time saving purposes
+flag_break_images_to_tiles = False  # a flag for time saving purposes
+flag_find_dx_between_images = False  # a flag for time saving purposes
+flag_train_UNet = True  # a flag for time saving purposes
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
 end_date = "2020-12-31"  # "YYYY-MM-DD"
@@ -406,26 +419,24 @@ if flag_break_images_to_tiles:
                                                                    pollution_dict_min_max_values[keyword]['max'],
                                                                    info_acc_percent=0.6)
 
-# -------------------------------------------------------- #
-# ---------- 5b) Break Satelite Images to Tiles ---------- #
-# -------------------------------------------------------- #
+# --------------------------------------------------------- #
+# ---------- 5b) Break Satelite Images to DTiles ---------- #
+# --------------------------------------------------------- #
 
 if flag_find_dx_between_images:
-    print()
     pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
-
     import_img_path_folder = path_for_saving_tiles
-
     clear_dir_files(path_for_saving_dx_tiles)
+    print()
     for country in list_unique_countries:
-        print()
+        # print()
         print('Exporting Dtiles for ' + country)
-        export_dir_path = path_for_saving_dx_tiles + country + '/'
+        export_dir_path = path_for_saving_dx_tiles + country.replace(' ', '_') + '/'
         if not os.path.exists(export_dir_path):
             os.makedirs(export_dir_path)
 
         dict_with_dtile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
-            list_img_path_dir=import_img_path_folder + country + '/',
+            list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
             list_pollution=pollution_keywords_in_path,
             list_date_range=list_date_range_path_string)
         for key in dict_with_dtile_paths.keys():
@@ -443,8 +454,67 @@ if flag_find_dx_between_images:
                 img_now = my_geo_img.open_image_file(d_date_range_path[0])
                 img_next = my_geo_img.open_image_file(d_date_range_path[1])
                 dtile_img = img_next - img_now
-                export_img_path = (export_dir_path + country + '_' + key + '_' + d_date_range[0] + '_' + d_date_range[1] +
-                                   '_size_' + str(tile_size) + 'x' + str(tile_size) +
-                                   '_tile_id_' + str(export_index) + '.png')
+                export_img_path = (
+                        export_dir_path + country + '_' + key + '_' + d_date_range[0] + '_' + d_date_range[1] +
+                        '_size_' + str(tile_size) + 'x' + str(tile_size) +
+                        '_tile_' + str(export_index) + '_id' + '.png')
 
                 my_geo_img.export_image_file(export_img_path, dtile_img)
+
+# ----------------------------------------------- #
+# ---------- 6a) Train Unet with Tiles ---------- #
+# ----------------------------------------------- #
+
+if flag_train_UNet:
+    pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
+
+    nn_uNet = my_uNet.MyUNet()
+    nn_uNet.set_uNet(height=tile_size, width=tile_size, channels=len(pollution_keywords_in_path), n_filters=16)
+
+    import_img_path_folder = path_for_saving_tiles
+    country = 'Albania'
+    dict_with_dtile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
+        list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
+        list_pollution=pollution_keywords_in_path,
+        list_date_range=list_date_range_path_string)
+
+    df_xs = []
+    df_ys = []
+    for paths_id in range(0, len(dict_with_dtile_paths[pollution_keywords_in_path[0]])):
+        tmp_xs = []
+        tmp_ys = []
+        for keyword in pollution_keywords_in_path:
+            x_img = my_geo_img.open_image_file(dict_with_dtile_paths[keyword][paths_id][0])  # this week
+            y_img = my_geo_img.open_image_file(dict_with_dtile_paths[keyword][paths_id][1])  # next week
+            tmp_xs.append(x_img)
+            tmp_ys.append(y_img)
+        tmp_xs = np.array(tmp_xs).T
+        tmp_ys = np.array(tmp_ys).T
+        df_xs.append(tmp_xs)
+        df_ys.append(tmp_ys)
+
+    df_xs = np.array(df_xs) / 255.0
+    df_ys = np.array(df_ys) / 255.0
+
+    print(df_xs.shape)
+    print(df_ys.shape)
+
+    # TRAIN - TEST - VALIDATION INDEXES
+    indexes = np.random.permutation(df_xs.shape[0])
+    train_percentage = 0.70
+    valid_percentage = 0.10
+    test_percentage = 1 - (train_percentage + valid_percentage)
+    where_to_cut = [int(len(indexes) * train_percentage),
+                    int(len(indexes) * (train_percentage + valid_percentage))]
+    train_indexes = indexes[0:where_to_cut[0]]
+    valid_indexes = indexes[where_to_cut[0] + 1:where_to_cut[1]]
+    test_indexes = indexes[where_to_cut[1] + 1:]
+
+    results = nn_uNet.train_uNet(X_train=df_xs[train_indexes],
+                                 Y_train=df_ys[train_indexes],
+                                 X_val=df_xs[valid_indexes],
+                                 Y_val=df_ys[valid_indexes],
+                                 export_model_path=export_model_path + 'pollutant_model.h5',
+                                 export_model_name_path=export_model_name_path + 'pollutant_model_name.h5')
+
+    print(results)
