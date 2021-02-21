@@ -7,6 +7,7 @@ import time  # import time
 import os  # import os
 import numpy as np
 import test_uNet as my_uNet
+import datetime as dt
 
 pd.options.mode.chained_assignment = None  # this line prevents an error of pd.fillna() function
 
@@ -32,15 +33,24 @@ path_for_saving_dx_tiles = 'D:/Documents/Didaktoriko/ACNN/export_data/figure_dti
     tile_size) + '/'
 check_create_folders_in_path(path_for_saving_dx_tiles)
 
+export_model_covid_meas_path = 'D:/Documents/Didaktoriko/ACNN/export_data/covid_measures_' + str(tile_size) + 'x' + str(
+    tile_size) + '/'
+check_create_folders_in_path(export_model_covid_meas_path)
+
 export_model_path = 'export_data/uNet/export_model/'
 check_create_folders_in_path(export_model_path)
 export_model_name_path = 'export_data/uNet/export_model_name/'
 check_create_folders_in_path(export_model_name_path)
+export_train_val_test_data_path = 'D:/Documents/Didaktoriko/ACNN/export_data/train_val_test_' + str(
+    tile_size) + 'x' + str(
+    tile_size) + '/'
+check_create_folders_in_path(export_train_val_test_data_path)
 
 flag_print_covid_country_plot_fig = False  # a flag for time saving purposes
 flag_download_satellite_data = False  # a flag for time saving purposes
 flag_break_images_to_tiles = False  # a flag for time saving purposes
 flag_find_dx_between_images = False  # a flag for time saving purposes
+flag_covid_meas_images = False  # a flag for time saving purposes
 flag_train_UNet = True  # a flag for time saving purposes
 
 start_date = "2020-01-01"  # "YYYY-MM-DD"
@@ -435,13 +445,13 @@ if flag_find_dx_between_images:
         if not os.path.exists(export_dir_path):
             os.makedirs(export_dir_path)
 
-        dict_with_dtile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
+        dict_with_tile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
             list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
             list_pollution=pollution_keywords_in_path,
             list_date_range=list_date_range_path_string)
-        for key in dict_with_dtile_paths.keys():
-            for i in range(0, len(dict_with_dtile_paths[key])):
-                d_date_range_path = dict_with_dtile_paths[key][i]
+        for key in dict_with_tile_paths.keys():
+            for i in range(0, len(dict_with_tile_paths[key])):
+                d_date_range_path = dict_with_tile_paths[key][i]
                 d_date_range = dict_week_start_end_ranges[key][i]
                 export_index = dict_export_index[key][i]
 
@@ -455,66 +465,190 @@ if flag_find_dx_between_images:
                 img_next = my_geo_img.open_image_file(d_date_range_path[1])
                 dtile_img = img_next - img_now
                 export_img_path = (
-                        export_dir_path + country + '_' + key + '_' + d_date_range[0] + '_' + d_date_range[1] +
-                        '_size_' + str(tile_size) + 'x' + str(tile_size) +
+                        export_dir_path + country.replace(' ', '_') + '_' + key + '_' + d_date_range[0] + '_'
+                        + d_date_range[1] + '_size_' + str(tile_size) + 'x' + str(tile_size) +
                         '_tile_' + str(export_index) + '_id' + '.png')
 
                 my_geo_img.export_image_file(export_img_path, dtile_img)
 
 # ----------------------------------------------- #
+# ---------- 5c) Train Unet with Tiles ---------- #
+# ----------------------------------------------- #
+if flag_covid_meas_images:
+    def create_measure_img(measure_value, width_size, height_size):
+        tmp_list = []
+        for _ in range(width_size):
+            tmp_wid = []
+            for __ in range(height_size):
+                tmp_wid.append(measure_value)
+            tmp_list.append(tmp_wid)
+        return tmp_list
+
+
+    path_acnn_data = 'Data/acnn_data.csv'
+    df_acnn = pd.read_csv(path_acnn_data, low_memory=False)
+
+    df_dict_acnn = df_acnn[['COUNTRY',
+                            'DATE_RANGE',
+                            'RESTRICTIONS_INTERNAL_MOVEMENTS',
+                            'INTERNATIONAL_TRAVEL_CONTROLS',
+                            'CANCEL_PUBLIC_EVENTS',
+                            'RESTRICTION_GATHERINGS',
+                            'CLOSE_PUBLIC_TRANSPORT',
+                            'SCHOOL_CLOSURES',
+                            'STAY_HOME_REQUIREMENTS',
+                            'WORKPLACE_CLOSURES']]
+
+    df_acnn = df_acnn[['COUNTRY',
+                       'DATE_RANGE',
+                       'RESTRICTIONS_INTERNAL_MOVEMENTS',
+                       'INTERNATIONAL_TRAVEL_CONTROLS',
+                       'CANCEL_PUBLIC_EVENTS',
+                       'RESTRICTION_GATHERINGS',
+                       'CLOSE_PUBLIC_TRANSPORT',
+                       'SCHOOL_CLOSURES',
+                       'STAY_HOME_REQUIREMENTS',
+                       'WORKPLACE_CLOSURES']].values.tolist()
+
+    covid_measures_headers = ['RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+                              'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+                              'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']
+
+    clear_dir_files(export_model_covid_meas_path)
+    print()
+    for country in list_unique_countries:
+        print('Export covid measure images for ' + country)
+        export_id = 0
+        check_create_folders_in_path(export_model_covid_meas_path + country.replace(' ', '_') + '/')
+        for date_range in list_date_range_path_string:
+            for measure in covid_measures_headers:
+                for i in range(0, len(df_acnn)):
+                    if country.replace(' ', '_') == df_acnn[i][0] and date_range == df_acnn[i][1]:
+                        norm_value = (df_dict_acnn[measure][i] / 4.0) * 255
+                        tmp_measure_img = create_measure_img(norm_value, tile_size, tile_size)
+                        img_export_path = (
+                                export_model_covid_meas_path + country.replace(' ', '_') + '/' +
+                                country.replace(' ', '_') + '_' + measure + '_' + date_range + '_' + 'size_' +
+                                str(tile_size) + 'x' + str(tile_size) + '_tile_' + str(export_id) + '_id' + '.png')
+                        my_geo_img.export_image_file(img_export_path, np.array(tmp_measure_img))
+                        break
+
+# ----------------------------------------------- #
 # ---------- 6a) Train Unet with Tiles ---------- #
 # ----------------------------------------------- #
-
 if flag_train_UNet:
     pollution_keywords_in_path = ['carbon_monoxide', 'ozone']
+    covid_measures_headers = ['RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+                              'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+                              'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']
 
+    epochs = 100
     nn_uNet = my_uNet.MyUNet()
-    nn_uNet.set_uNet(height=tile_size, width=tile_size, channels=len(pollution_keywords_in_path), n_filters=16)
+    nn_uNet.set_uNet(height=tile_size, width=tile_size, channels_input=10, channels_output=2, n_filters=16)
 
     import_img_path_folder = path_for_saving_tiles
-    country = 'Albania'
-    dict_with_dtile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
-        list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
-        list_pollution=pollution_keywords_in_path,
-        list_date_range=list_date_range_path_string)
+    import_img_path_covid_folder = export_model_covid_meas_path
+    # country = 'Albania'
+    tmp_results_index = 0
+    export_train_val_test_data_path_with_epochs = export_train_val_test_data_path + 'epochs_' + str(epochs).zfill(4) + '/'
+    check_create_folders_in_path(export_train_val_test_data_path_with_epochs)
+    clear_dir_files(export_train_val_test_data_path_with_epochs)
+    start_time = dt.datetime.now()
+    for country in list_unique_countries:
+        print('\n\n\n')
+        print('Train uNet for ' + country + ' ' + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
+        print('Process started at: ', start_time.strftime("(%Y-%m-%d %H:%M:%S)"))
+        dict_with_tile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
+            list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
+            list_pollution=pollution_keywords_in_path,
+            list_date_range=list_date_range_path_string)
 
-    df_xs = []
-    df_ys = []
-    for paths_id in range(0, len(dict_with_dtile_paths[pollution_keywords_in_path[0]])):
-        tmp_xs = []
-        tmp_ys = []
+        dict_with_covid_paths, dict_covid_week_start_end_ranges, dict_covid_export_index = my_geo_img.find_tile_paths_matches(
+            list_img_path_dir=import_img_path_covid_folder + country.replace(' ', '_') + '/',
+            list_pollution=covid_measures_headers,
+            list_date_range=list_date_range_path_string)
+
+        df_xs = []
+        df_ys = []
+        # print(len(dict_with_dtile_paths[pollution_keywords_in_path[0]]))
+        # print(len(dict_covid_export_index[covid_measures_headers[0]]))
+        min_keywords_len = None
         for keyword in pollution_keywords_in_path:
-            x_img = my_geo_img.open_image_file(dict_with_dtile_paths[keyword][paths_id][0])  # this week
-            y_img = my_geo_img.open_image_file(dict_with_dtile_paths[keyword][paths_id][1])  # next week
-            tmp_xs.append(x_img)
-            tmp_ys.append(y_img)
-        tmp_xs = np.array(tmp_xs).T
-        tmp_ys = np.array(tmp_ys).T
-        df_xs.append(tmp_xs)
-        df_ys.append(tmp_ys)
+            if min_keywords_len is None:
+                min_keywords_len = len(dict_with_tile_paths[keyword])
+            else:
+                if len(dict_with_tile_paths[keyword]) < min_keywords_len:
+                    min_keywords_len = len(dict_with_tile_paths[keyword])
 
-    df_xs = np.array(df_xs) / 255.0
-    df_ys = np.array(df_ys) / 255.0
+        min_covid_keywords_len = None
+        for keyword in covid_measures_headers:
+            if min_covid_keywords_len is None:
+                min_covid_keywords_len = len(dict_with_covid_paths[keyword])
+            else:
+                if len(dict_with_covid_paths[keyword]) < min_keywords_len:
+                    min_covid_keywords_len = len(dict_with_covid_paths[keyword])
 
-    print(df_xs.shape)
-    print(df_ys.shape)
+        if min_keywords_len != 0 and min_covid_keywords_len != 0:
+            for paths_id in range(0, min_keywords_len):
+                tmp_xs = []
+                tmp_ys = []
+                for keyword in pollution_keywords_in_path:
+                    if keyword is pollution_keywords_in_path[0]:
+                        for covid_keyword in covid_measures_headers:
+                            for covid_id in range(min_covid_keywords_len):
+                                if dict_week_start_end_ranges[keyword][paths_id] == \
+                                        dict_covid_week_start_end_ranges[covid_keyword][covid_id]:
+                                    # print(dict_week_start_end_ranges[keyword][paths_id], dict_covid_week_start_end_ranges[covid_keyword][covid_id])
+                                    x_img = my_geo_img.open_image_file(dict_with_covid_paths[covid_keyword][covid_id][0])
+                                    tmp_xs.append(x_img)
+                                    break
 
-    # TRAIN - TEST - VALIDATION INDEXES
-    indexes = np.random.permutation(df_xs.shape[0])
-    train_percentage = 0.70
-    valid_percentage = 0.10
-    test_percentage = 1 - (train_percentage + valid_percentage)
-    where_to_cut = [int(len(indexes) * train_percentage),
-                    int(len(indexes) * (train_percentage + valid_percentage))]
-    train_indexes = indexes[0:where_to_cut[0]]
-    valid_indexes = indexes[where_to_cut[0] + 1:where_to_cut[1]]
-    test_indexes = indexes[where_to_cut[1] + 1:]
+                    x_img = my_geo_img.open_image_file(dict_with_tile_paths[keyword][paths_id][0])  # this week
+                    y_img = my_geo_img.open_image_file(dict_with_tile_paths[keyword][paths_id][1])  # next week
+                    tmp_xs.append(x_img)
+                    tmp_ys.append(y_img)
+                tmp_xs = np.array(tmp_xs).T
+                tmp_ys = np.array(tmp_ys).T
+                df_xs.append(tmp_xs)
+                df_ys.append(tmp_ys)
 
-    results = nn_uNet.train_uNet(X_train=df_xs[train_indexes],
-                                 Y_train=df_ys[train_indexes],
-                                 X_val=df_xs[valid_indexes],
-                                 Y_val=df_ys[valid_indexes],
-                                 export_model_path=export_model_path + 'pollutant_model.h5',
-                                 export_model_name_path=export_model_name_path + 'pollutant_model_name.h5')
+            df_xs = np.array(df_xs) / 255.0
+            df_ys = np.array(df_ys) / 255.0
 
-    print(results)
+            # print(df_xs.shape)
+            # print(df_ys.shape)
+
+            # TRAIN - TEST - VALIDATION INDEXES
+            indexes = np.random.permutation(df_xs.shape[0])
+            train_percentage = 0.70
+            valid_percentage = 0.10
+            test_percentage = 1 - (train_percentage + valid_percentage)
+            where_to_cut = [int(len(indexes) * train_percentage),
+                            int(len(indexes) * (train_percentage + valid_percentage))]
+            train_indexes = indexes[0:where_to_cut[0]]
+            valid_indexes = indexes[where_to_cut[0] + 1:where_to_cut[1]]
+            test_indexes = indexes[where_to_cut[1] + 1:]
+
+            df_dict_train_val_test = [pd.DataFrame.from_dict({'train_indexes': train_indexes}),
+                                      pd.DataFrame.from_dict({'val_indexes': valid_indexes}),
+                                      pd.DataFrame.from_dict({'test_indexes': test_indexes})]
+
+            export_train_val_test_dir_path = export_train_val_test_data_path_with_epochs + country + '/'
+            check_create_folders_in_path(export_train_val_test_dir_path)
+            for df_array in df_dict_train_val_test:
+                export_train_val_test_file_path = export_train_val_test_dir_path + country + '_' + df_array.keys()[0] + '.csv'
+                df_array.to_csv(export_train_val_test_file_path)
+
+            results = nn_uNet.train_uNet(X_train=df_xs[train_indexes],
+                                         Y_train=df_ys[train_indexes],
+                                         X_val=df_xs[valid_indexes],
+                                         Y_val=df_ys[valid_indexes],
+                                         export_model_path=export_model_path + 'pollutant_tile_model_' + str(epochs) + '_epochs.h5',
+                                         export_model_name_path=export_model_name_path + 'pollutant_tile_model_name' + str(epochs) + '_epochs.h5',
+                                         epochs=epochs)
+    end_time = dt.datetime.now()
+    print()
+    print('Process finished!')
+    print('Started At: ', start_time)
+    print('Ended At: ', end_time)
+    print('Run for ', end_time-start_time, ' time!')

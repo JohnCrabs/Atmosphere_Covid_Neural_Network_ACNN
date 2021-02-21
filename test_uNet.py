@@ -1,14 +1,12 @@
 # %tensorflow_version 1.x
 import tensorflow as tf
 import keras
-import cv2
-import numpy as np
-import os
 
 # ---------------------------------- #
 
 # px_width = px_height = px_size
 # px_size X px_size X bands X paradigms
+
 
 def conv2d_block(input_tensor, n_filters, kernel_size=3, batchnorm=True):
     # first layer
@@ -30,10 +28,10 @@ class MyUNet:
     def __init__(self):
         self.UnetCustMod = None
 
-    def set_uNet(self, width, height, channels, n_filters=16):
+    def set_uNet(self, width, height, channels_input, channels_output, n_filters=16):
 
         # Build U-Net model
-        inputs = keras.layers.Input((height, width, channels))
+        inputs = keras.layers.Input((height, width, channels_input))
         # s = keras.layers.Lambda(lambda x: x / 255)(inputs)  # normalize the input
         # s = inputs  # uncomment this if image is not 8-bit integer
         conv1 = conv2d_block(inputs, n_filters=n_filters * 1, kernel_size=3, batchnorm=True)
@@ -62,7 +60,7 @@ class MyUNet:
         conv7 = conv2d_block(u7, n_filters=n_filters * 4, kernel_size=3, batchnorm=True)
 
         # outputs = keras.layers.Conv2D(1, (1, 1), activation='sigmoid')(conv7)
-        outputs = keras.layers.Conv2D(channels, (1, 1), padding='same', activation='sigmoid')(
+        outputs = keras.layers.Conv2D(channels_output, (1, 1), padding='same', activation='sigmoid')(
             conv7)  # change this according to the num of classes
         self.UnetCustMod = keras.Model(inputs=[inputs], outputs=[outputs])
 
@@ -73,7 +71,7 @@ class MyUNet:
 
         self.UnetCustMod.summary()
 
-    def train_uNet(self, X_train, Y_train, X_val, Y_val, export_model_path, export_model_name_path):
+    def train_uNet(self, X_train, Y_train, X_val, Y_val, export_model_path, export_model_name_path, epochs=100):
         callbacksOptions = [
             keras.callbacks.EarlyStopping(patience=15, verbose=1),
             keras.callbacks.ReduceLROnPlateau(factor=0.1, patience=12, min_lr=0.0001, verbose=1),
@@ -87,7 +85,7 @@ class MyUNet:
         print('X_val = ', X_val.shape)
         print('X_val = ', Y_val.shape)
 
-        results = self.UnetCustMod.fit(X_train, Y_train, batch_size=4, epochs=100, callbacks=callbacksOptions, validation_data=(X_val, Y_val))
+        results = self.UnetCustMod.fit(X_train, Y_train, batch_size=4, epochs=epochs, callbacks=callbacksOptions, validation_data=(X_val, Y_val))
         self.UnetCustMod.save(export_model_name_path)
 
         return results

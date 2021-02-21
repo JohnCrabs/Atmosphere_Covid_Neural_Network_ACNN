@@ -1,8 +1,12 @@
-import gdal
 import numpy as np
 import math
 import cv2 as cv
 import os
+
+try:
+    import gdal
+except:
+    pass
 
 MY_GEO_MIN = 'min'
 MY_GEO_MAX = 'max'
