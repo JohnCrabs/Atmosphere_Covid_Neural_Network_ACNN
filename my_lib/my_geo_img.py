@@ -110,13 +110,13 @@ def img_break_tiles_and_export_them(img: [], folder_path, export_name, tile_size
         tmp_x, tmp_y = tmp_img[i].shape
         if tmp_x == tmp_y:
             export_img = np.nan_to_num(tmp_img[i], nan=check_min_value)
-            export_img = ((export_img - check_min_value) / (norm_divider - check_min_value))
+            export_img = ((export_img - check_min_value) / (norm_divider - check_min_value))  # norm = (X - min) / (max - min)
             non_zero_size = np.count_nonzero(export_img)
             px_size = tmp_x * tmp_y
             info_percent = float(non_zero_size) / float(px_size)
 
             if info_percent > info_acc_percent:
-                export_img = export_img * 255.0 / export_img.max()
+                export_img = export_img * 255.0 / norm_divider
                 export_image_file(
                     folder_path + export_name + '_size_' + str(tile_size) + 'x' + str(tile_size)
                     + '_tile_' + str(export_index) + '_id_' + suffix, export_img)

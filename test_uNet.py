@@ -28,6 +28,9 @@ class MyUNet:
     def __init__(self):
         self.UnetCustMod = None
 
+    def load_model(self, path):
+        self.UnetCustMod.load_weights(path)
+
     def set_uNet(self, width, height, channels_input, channels_output, n_filters=16):
 
         # Build U-Net model
@@ -89,3 +92,31 @@ class MyUNet:
         self.UnetCustMod.save(export_model_name_path)
 
         return results
+
+    def test_uNet(self, X_test, Y_test, norm_max, norm_min):
+        import numpy as np
+        predict_values = self.UnetCustMod.predict(X_test)
+
+        denorm_pred = []
+        denorm_Y = []
+
+        for index in range(Y_test.shape[2]):
+            tmp_denorm_pred = predict_values[index] * norm_max[index] / 255.0
+            tmp_denorm_pred = (norm_max[index] - norm_min[index]) / (tmp_denorm_pred[index] - norm_min[index])
+            denorm_pred.append(tmp_denorm_pred)
+
+            tmp_denorm_Y = Y_test * norm_max / 255.0
+            tmp_denorm_Y = (norm_max[index] - norm_min[index]) / (tmp_denorm_Y[index] - norm_min[index])
+            denorm_Y.append(tmp_denorm_Y)
+
+        # Error calculation
+        diff_vals = np.array(denorm_pred) - np.array(denorm_Y)
+        # root_mean_sqrt = np.sqrt(np.sum(diff_vals) / Y_test.shape[0]*Y_test.shape[1])
+        # stdev_root_mean_sqrt =
+        # mean_absolute_error =
+        # stdev_mean_absolute_error =
+        max_error = [e.max() for e in diff_vals]
+
+    def predict_uNet(self, X_pred):
+        predictions = self.UnetCustMod.predict(X_pred)
+        return predictions
