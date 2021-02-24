@@ -304,11 +304,11 @@ if _FLAG_FOR_DOWNLOADING_SENTINEL_DATA:
 # ---------- 5) PLOT COVID MEASURES ---------- #
 # -------------------------------------------- #
 # print(df_polllution_dict.keys())
-df_pollution_mean_range_dict = {}
+df_pollution_mean_range_dict = {}  #
 df_pollution_mean_range_dict_with_headers = {}
-if _FLAG_FOR_PLOT_COVID_COUNTRY_FIGURES:
-    for key in df_polllution_dict.keys():
-        df_pollution_mean_range_dict[key.replace(' ', '_')] = []
+if _FLAG_FOR_PLOT_COVID_COUNTRY_FIGURES:  # If True
+    for key in df_polllution_dict.keys():  # for each key in pollution df dictionary
+        df_pollution_mean_range_dict[key.replace(' ', '_')] = []  # add key as a list
         df_pollution_mean_range_dict[key.replace(' ', '_')] = my_cal_v2.merge_values_in_date_range_list(
             list_input=df_polllution_dict.copy()[key],
             date_index=0,
@@ -316,23 +316,26 @@ if _FLAG_FOR_PLOT_COVID_COUNTRY_FIGURES:
             merge_type=my_cal_v2.merge_mean,
             del_input=my_cal_v2.del_dash,
             del_output=my_cal_v2.del_none,
-            del_use=True)
+            del_use=True)  # merge values using date format
 
         # print(key, df_pollution_mean_range_dict[key])
 
-    for key in df_pollution_mean_range_dict.keys():
-        path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + key + '/'
-        if not os.path.exists(path_to_export_plot_png):
-            os.mkdir(path_to_export_plot_png)
-        df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')] = []
-        for dataset_index in range(0, len(df_pollution_mean_range_dict[key])):
-            tmp_dataset_list = [df_pollution_mean_range_dict[key][dataset_index][0]]
-            for value in df_pollution_mean_range_dict[key][dataset_index][1]:
-                tmp_dataset_list.append(value)
-            df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')].append(tmp_dataset_list)
+    # Find statistics and plot them
+    for key in df_pollution_mean_range_dict.keys():  # for each key in newly created dict
+        path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + key + '/'  # create new dir
+        check_create_folders_in_path(path_to_export_plot_png)  # check if path exist and create it otherwise
+        df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')] = []  # create empty list
+
+        for dataset_index in range(0, len(df_pollution_mean_range_dict[key])):  # for each dataset (take index)
+            tmp_dataset_list = [df_pollution_mean_range_dict[key][dataset_index][0]]  # first list is the name
+            for value in df_pollution_mean_range_dict[key][dataset_index][1]:  # for each value
+                tmp_dataset_list.append(value)  # append the value
+            df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')].append(tmp_dataset_list)  # append it to dict
         df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')] = pd.DataFrame(
-            df_pollution_mean_range_dict_with_headers[key],
-            columns=_LIST_COVID_MEASURES_HEADERS_FOR_POLLUTION)
+            df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')],
+            columns=_LIST_COVID_MEASURES_HEADERS_FOR_POLLUTION)  # make it dataFrame
+
+        # Plot the values
         df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')].plot(x=_STR_X_AXIS_PLOT, y=_LIST_Y_AXIS_PLOT)
         plt.gcf().set_size_inches(20.48, 10.24)
         plt.xticks(rotation=90)
