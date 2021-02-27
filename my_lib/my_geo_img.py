@@ -2,11 +2,7 @@ import numpy as np
 import math
 import cv2 as cv
 import os
-
-try:
-    import gdal
-except:
-    pass
+from osgeo import gdal
 
 MY_GEO_MIN = 'min'
 MY_GEO_MAX = 'max'
@@ -42,34 +38,25 @@ def img_statistics(img: [], round_at=3):
     median_px = 0
 
     sum_px = 0
-    counter_px = 0
 
     median_px_list = []
 
     for row in img:
         for px in row:
             if not np.isnan(px):
-                if counter_px == 0:
-                    min_px = px
-                    max_px = px
-                else:
-                    if px < min_px:
-                        min_px = px
-                    if px > max_px:
-                        max_px = px
-
                 sum_px += px
-                counter_px += 1
                 median_px_list.append(px)
 
-    if counter_px != 0:
-        mean_px = mean_calculate(sum_px, counter_px)
-        for x in median_px_list:
-            std_dev += (x - median_px) * (x - median_px)
-        std_dev = math.sqrt(std_dev / len(median_px_list))
-
+    if len(median_px_list) != 0:
         median_px_list.sort()
         median_px = median_px_list[int(len(median_px_list) / 2)]
+        min_px = median_px_list[0]
+        max_px = median_px_list[len(median_px_list)-1]
+
+        mean_px = mean_calculate(sum_px, len(median_px_list))
+        for x in median_px_list:
+            std_dev += ((x - median_px) * (x - median_px))
+        std_dev = math.sqrt(std_dev / len(median_px_list))
 
     return {MY_GEO_MIN: round(min_px, round_at),
             MY_GEO_MAX: round(max_px, round_at),
@@ -116,7 +103,7 @@ def img_break_tiles_and_export_them(img: [], folder_path, export_name, tile_size
             info_percent = float(non_zero_size) / float(px_size)
 
             if info_percent > info_acc_percent:
-                export_img = export_img * 255.0 / norm_divider
+                export_img = export_img * 255.0
                 export_image_file(
                     folder_path + export_name + '_size_' + str(tile_size) + 'x' + str(tile_size)
                     + '_tile_' + str(export_index) + '_id_' + suffix, export_img)
@@ -133,17 +120,20 @@ def find_tiles_number(list_img_paths, list_pollution, list_date_range):
 
 
 def find_tile_paths_matches(list_img_path_dir, list_pollution, list_date_range):
-    tmp_img_filenames = os.listdir(list_img_path_dir)
+    root = list_img_path_dir
+    tmp_img_filenames = [os.path.normpath(os.path.join(path, name)) for path, subdirs, files in os.walk(root) for name in files]
+    # print(tmp_img_filenames[0])
     tile_split_index_size = find_tiles_number(tmp_img_filenames, list_pollution, list_date_range)
-    dict_export_tmp = {}
-    dict_week_start_end_ranges = {}
-    dict_export_index = {}
-    for keyword in list_pollution:
-        dict_export_tmp[keyword] = []
-        dict_week_start_end_ranges[keyword] = []
-        dict_export_index[keyword] = []
+    # print(tile_split_index_size)
+    dict_export_tmp = {}  # create an empty dict for export
+    dict_week_start_end_ranges = {}  # create an empty week start and end ranges
+    dict_export_index = {}  # create an empty dict for indexes
+    for pollutant in list_pollution:  # for each pollutant
+        dict_export_tmp[pollutant] = []
+        dict_week_start_end_ranges[pollutant] = []
+        dict_export_index[pollutant] = []
 
-    for keyword in list_pollution:
+    for pollutant in list_pollution:
         for i in range(0, len(list_date_range) - 1):
             for index in range(tile_split_index_size):
                 tmp_list_to_append = []
@@ -151,20 +141,20 @@ def find_tile_paths_matches(list_img_path_dir, list_pollution, list_date_range):
                 break_loop = False
                 can_append_list = False
                 for filename in tmp_img_filenames:
-                    path_to_append = list_img_path_dir + filename
-                    if keyword in filename and list_date_range[i] in filename and 'tile_' + \
+                    path_to_append = filename
+                    if pollutant in filename and list_date_range[i] in filename and 'tile_' + \
                             str(index) + '_id' in filename:
                         tmp_list_to_append.append(path_to_append)
                         tmp_list_date_to_append.append(list_date_range[i].split('_')[0])
-                        dict_export_index[keyword].append(index)
+                        dict_export_index[pollutant].append(index)
                         can_append_list = True
-                    if keyword in filename and list_date_range[i + 1] in filename and 'tile_' + \
+                    if pollutant in filename and list_date_range[i + 1] in filename and 'tile_' + \
                             str(index) + '_id' in filename:
                         tmp_list_to_append.append(path_to_append)
                         if can_append_list:
-                            dict_export_tmp[keyword].append(tmp_list_to_append)
+                            dict_export_tmp[pollutant].append(tmp_list_to_append)
                             tmp_list_date_to_append.append(list_date_range[i+1].split('_')[1])
-                            dict_week_start_end_ranges[keyword].append(tmp_list_date_to_append)
+                            dict_week_start_end_ranges[pollutant].append(tmp_list_date_to_append)
                         break_loop = True
                     if break_loop:
                         break
