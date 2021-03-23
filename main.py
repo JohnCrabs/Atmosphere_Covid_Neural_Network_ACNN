@@ -14,21 +14,29 @@ from my_lib import my_calendar_v2 as my_cal_v2  # import my calendar lib (for da
 import shutil
 
 pd.options.mode.chained_assignment = None  # this line prevents an error of pd.fillna() function
-
+plt.ioff()
 # ----------------------------------------- #
 # ---------- 0) Define Variables ---------- #
 # ----------------------------------------- #
 _ON = True  # Create a switch ON (use this for better visualization of the code)
 _OFF = False  # Create a switch OFF (use this for better visualization of the code)
 
+_PLOT_FONTSIZE_TITLE = 25
+_PLOT_FONTSIZE_TICKS = 20
+_PLOT_FONTSIZE_LABEL = 22.5
+_PLOT_FONTSIZE_LEGEND = 18
+_PLOT_SIZE_WIDTH = 12.40
+_PLOT_SIZE_HEIGHT = 12.40
+_PLOT_SIZE_DPI = 100
+
 _FLAG_FOR_DOWNLOADING_SENTINEL_DATA = _OFF  # a flag for time saving purposes
 _FLAG_FOR_PLOT_COVID_COUNTRY_FIGURES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_BREAKING_SENTINEL_IMAGES_TO_TILES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_CREATING_DTILES = _OFF  # a flag for time saving purposes
-_FLAG_FOR_CREATING_COVID_IMAGES = _ON  # a flag for time saving purposes
-_FLAG_FOR_TRAINING_UNET = _OFF  # a flag for time saving purposes
-_FLAG_FOR_TESTING_UNET = _OFF  # a flag for time saving purposes
+_FLAG_FOR_CREATING_COVID_IMAGES = _OFF  # a flag for time saving purposes
+_FLAG_FOR_TRAINING_UNET = _ON  # a flag for time saving purposes
+_FLAG_FOR_TESTING_UNET = _ON  # a flag for time saving purposes
 
 S05_SCALE_M_PER_PX = 5000
 S05_SLEEP_MINUTE_MULTIPLIER = 0.0
@@ -52,6 +60,7 @@ _PATH_FOR_SAT_IMAGE_TILES = _PATH_PRIMARY_DIR + 'Figure_Tiles/' + str(_TILE_SIZE
 _PATH_FOR_DTILES = _PATH_PRIMARY_DIR + 'Figure_Dtiles/' + str(_TILE_SIZE) + 'x' + str(_TILE_SIZE) + '/'
 _PATH_FOR_COVID_MEASURE_TILES = _PATH_PRIMARY_DIR + 'Covid_Measures/' + str(_TILE_SIZE) + 'x' + str(_TILE_SIZE) + '/'
 _PATH_FOR_TRAIN_VAL_TEST_INDEXES = _PATH_PRIMARY_DIR + 'Train_Val_Test_' + str(_TILE_SIZE) + 'x' + str(_TILE_SIZE) + '/'
+_PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS = _PATH_FOR_TRAIN_VAL_TEST_INDEXES + 'epochs_' + str(_EPOCHS).zfill(4) + '/'
 _PATH_FOR_NN_MODEL = _PATH_PRIMARY_DIR + 'NN_Models/'
 _PATH_FOR_NN_MODEL_NAME = _PATH_PRIMARY_DIR + 'NN_Model_Names/'
 
@@ -60,6 +69,7 @@ _PATH_FOR_SAT_RAW_IMAGES_DIR = _PATH_PRIMARY_DIR + 'Satellite_Atmospheric_Images
 
 _PATH_FOR_COVID_DATE_RANGES_MEASURES_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_covid_date_range_measures.csv"
 _PATH_FOR_S05_DATE_RANGES_POLLUTANT_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_s05_date_range_pollutants_statistics.csv"
+
 
 # ----------------------------------------- #
 # ---------- 1) Define Functions ---------- #
@@ -154,6 +164,7 @@ check_create_folders_in_path(_PATH_FOR_SAT_IMAGE_TILES)
 check_create_folders_in_path(_PATH_FOR_DTILES)
 check_create_folders_in_path(_PATH_FOR_COVID_MEASURE_TILES)
 check_create_folders_in_path(_PATH_FOR_TRAIN_VAL_TEST_INDEXES)
+check_create_folders_in_path(_PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS)
 check_create_folders_in_path(_PATH_FOR_NN_MODEL)
 check_create_folders_in_path(_PATH_FOR_NN_MODEL_NAME)
 check_create_folders_in_path(_PATH_FOR_COVID_CSV_DIR)
@@ -212,7 +223,6 @@ _DICT_POLLUTANTS_MIN_MAX_RANGES = {'carbon_monoxide': {'min': 0.000, 'max': 0.06
                                    'ozone': {'min': 0.100, 'max': 0.170},
                                    'sulphur_dioxide': {'min': 0.000, 'max': 0.002},
                                    'nitrogen_dioxide': {'min': 0.00003, 'max': 0.00013}}  # mol/m^2
-
 
 # df_x_plot and df_y_plot used to export plots (for data visualization)
 _STR_X_AXIS_PLOT = _LIST_COVID_MEASURES_HEADERS_FOR_POLLUTION[0]
@@ -351,38 +361,40 @@ if _FLAG_FOR_PLOT_COVID_COUNTRY_FIGURES:  # If True
         # print(key, df_pollution_mean_range_dict[key])
 
     # Find statistics and plot them
-    for pollutant in df_pollution_mean_range_dict.keys():  # for each key in newly created dict
-        path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + pollutant + '/'  # create new dir
+    for country in df_pollution_mean_range_dict.keys():  # for each key in newly created dict
+        path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + country + '/'  # create new dir
         check_create_folders_in_path(path_to_export_plot_png)  # check if path exist and create it otherwise
-        df_pollution_mean_range_dict_with_headers[pollutant.replace(' ', '_')] = []  # create empty list
+        df_pollution_mean_range_dict_with_headers[country.replace(' ', '_')] = []  # create empty list
 
-        for dataset_index in range(0, len(df_pollution_mean_range_dict[pollutant])):  # for each dataset (take index)
-            tmp_dataset_list = [df_pollution_mean_range_dict[pollutant][dataset_index][0]]  # first list is the name
-            for value in df_pollution_mean_range_dict[pollutant][dataset_index][1]:  # for each value
+        for dataset_index in range(0, len(df_pollution_mean_range_dict[country])):  # for each dataset (take index)
+            tmp_dataset_list = [df_pollution_mean_range_dict[country][dataset_index][0]]  # first list is the name
+            for value in df_pollution_mean_range_dict[country][dataset_index][1]:  # for each value
                 tmp_dataset_list.append(value)  # append the value
-            df_pollution_mean_range_dict_with_headers[pollutant.replace(' ', '_')].append(
+            df_pollution_mean_range_dict_with_headers[country.replace(' ', '_')].append(
                 tmp_dataset_list)  # append it to dict
-        df_pollution_mean_range_dict_with_headers[pollutant.replace(' ', '_')] = pd.DataFrame(
-            df_pollution_mean_range_dict_with_headers[pollutant.replace(' ', '_')],
+        df_pollution_mean_range_dict_with_headers[country.replace(' ', '_')] = pd.DataFrame(
+            df_pollution_mean_range_dict_with_headers[country.replace(' ', '_')],
             columns=_LIST_COVID_MEASURES_HEADERS_FOR_POLLUTION)  # make it dataFrame
 
         # Plot the values
         # df_pollution_mean_range_dict_with_headers[key.replace(' ', '_')].plot(x=_STR_X_AXIS_PLOT, y=_LIST_Y_AXIS_PLOT)
-        plt.ioff()
-        plt.plot(df_pollution_mean_range_dict_with_headers[pollutant.replace(' ', '_')][_STR_X_AXIS_PLOT],
-                 df_pollution_mean_range_dict_with_headers[pollutant.replace(' ', '_')][_LIST_Y_AXIS_PLOT])
-        plt.gcf().set_size_inches(20.48, 10.24)
-        plt.xticks(rotation=90)
+        df_pollution_mean_range_dict_with_headers[country.replace(' ', '_')].plot(x=_STR_X_AXIS_PLOT,
+                                                                                  y=_LIST_Y_AXIS_PLOT)
+        plt.gcf().set_size_inches(_PLOT_SIZE_WIDTH, _PLOT_SIZE_HEIGHT)
+        plt.gcf().subplots_adjust(bottom=0.25)
+        plt.xticks(rotation=45, fontsize=_PLOT_FONTSIZE_TICKS)
+        plt.yticks(fontsize=_PLOT_FONTSIZE_TICKS)
+        plt.legend(fontsize=_PLOT_FONTSIZE_LEGEND, loc='best')
         plt.xlim(0, 53)
-        plt.ylim(0, 6)
-        plt.title(pollutant)
-        plt.xlabel('Date_Range')
-        plt.ylabel('Covid Measures')
+        plt.ylim(0, 7)
+        plt.title(country + ' Covid Measures in 2020', fontsize=_PLOT_FONTSIZE_TITLE)
+        plt.xlabel('Date_Range', fontsize=_PLOT_FONTSIZE_LABEL)
+        plt.ylabel('Covid Measures', fontsize=_PLOT_FONTSIZE_LABEL)
         plt.xticks(range(0, 52))
-        plt.savefig(path_to_export_plot_png + pollutant.replace(' ', '_') + "_covid_measures.png", dpi=100)
+        plt.savefig(path_to_export_plot_png + country.replace(' ', '_') + "_covid_measures.png", dpi=_PLOT_SIZE_DPI)
         time.sleep(1)
         plt.close()
-        print("Plot " + pollutant + " exported")
+        print("Plot " + country + " exported")
 
     csv_output_list = [['COUNTRY', 'DATE_RANGE', 'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
                         'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT', 'SCHOOL_CLOSURES',
@@ -412,7 +424,7 @@ if _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES:
         path_country = country.replace(' ', '_')  # replace spaces with undescores when needed
         tmp_img_path_folder = img_path_folder + path_country + '/'  # create the full dir path
         img_path_files = os.listdir(tmp_img_path_folder)  # list all files in directory
-        path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + country + '/'  # create the path to save plots
+        path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + path_country + '/'  # create the path to save plots
         check_create_folders_in_path(path_to_export_plot_png)  # check for the existence of the folders or mkdir them
 
         dict_pollution_stats = {}  # create a dictionary
@@ -433,21 +445,41 @@ if _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES:
                         dict_pollution_stats[pollutant].append(tmp_stats_list)  # append it to dictinary
 
             df_pollution_stats = pd.DataFrame(dict_pollution_stats[pollutant], columns=_LIST_POLLUTION_STATISTIC_HEADER)
-            plt.ioff()
-            plt.plot(df_pollution_stats[_STR_X_AXIS_PLOT],
-                     df_pollution_stats[['MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN']])
-            plt.gcf().set_size_inches(20.48, 10.24)
-            plt.xticks(rotation=90)
+            df_pollution_stats.plot(x=_STR_X_AXIS_PLOT, y=['MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN'])
+            plt.gcf().set_size_inches(_PLOT_SIZE_WIDTH, _PLOT_SIZE_HEIGHT)
+            plt.gcf().subplots_adjust(bottom=0.25)
+            plt.xticks(rotation=45, fontsize=15)
+            plt.yticks(fontsize=15)
+            plt.legend(fontsize=_PLOT_FONTSIZE_LEGEND, loc='best')
             plt.xlim(0, 53)
-            plt.title(country + "_" + pollutant + "_" + "density")
-            plt.xlabel('Date_Range')
-            plt.ylabel('Density')
-            plt.xticks(range(0, 53))
-            plt.savefig(path_to_export_plot_png + country + "_" + pollutant + ".png", dpi=100)
+            plt.title(country + " " + pollutant + " " + "Density", fontsize=_PLOT_FONTSIZE_TITLE)
+            plt.xlabel('Date_Range', fontsize=_PLOT_FONTSIZE_LABEL)
+            plt.ylabel('Density', fontsize=_PLOT_FONTSIZE_LABEL)
+            plt.xticks(range(0, 52))
+            plt.savefig(path_to_export_plot_png + path_country + "_" + pollutant + ".png", dpi=_PLOT_SIZE_DPI)
             time.sleep(1)
             plt.close()
             print("Plot " + country + " " + pollutant + " exported")
-            df_satelite_image_data_dict[country] = dict_pollution_stats.copy()
+            df_satelite_image_data_dict[path_country] = dict_pollution_stats.copy()
+
+            # Print another plot with means only
+            df_pollution_stats['MEAN_MAX'] = df_pollution_stats['MEAN'] + df_pollution_stats['STD_DEV']
+            df_pollution_stats['MEAN_MIN'] = df_pollution_stats['MEAN'] - df_pollution_stats['STD_DEV']
+            df_pollution_stats.plot(x=_STR_X_AXIS_PLOT, y=['MEAN_MAX', 'MEAN', 'MEAN_MIN'])
+            plt.gcf().set_size_inches(_PLOT_SIZE_WIDTH, _PLOT_SIZE_HEIGHT)
+            plt.gcf().subplots_adjust(bottom=0.25)
+            plt.xticks(rotation=45, fontsize=_PLOT_FONTSIZE_TICKS)
+            plt.yticks(fontsize=_PLOT_FONTSIZE_TICKS)
+            plt.legend(fontsize=_PLOT_FONTSIZE_LEGEND, loc='best')
+            plt.xlim(0, 53)
+            plt.title(path_country + " " + pollutant + " " + "MEAN Density", fontsize=_PLOT_FONTSIZE_TITLE)
+            plt.xlabel('Date Range', fontsize=_PLOT_FONTSIZE_LABEL)
+            plt.ylabel('MEAN Density', fontsize=_PLOT_FONTSIZE_LABEL)
+            plt.xticks(range(0, 52))
+            plt.savefig(path_to_export_plot_png + path_country + "_" + pollutant + "_mean_values.png",
+                        dpi=_PLOT_SIZE_DPI)
+            time.sleep(1)
+            print("Plot " + country + " " + pollutant + " mean exported")
 
     csv_output_list = [['COUNTRY', 'DATE_RANGE', 'CARBON_MONOOXIDE_MIN', 'CARBON_MONOOXIDE_MAX',
                         'CARBON_MONOOXIDE_MEAN', 'CARBON_MONOOXIDE_STDDEV', 'CARBON_MONOOXIDE_MEDIAN', 'OZONE_MIN',
@@ -462,7 +494,7 @@ if _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES:
         for date_range in _LIST_DATE_RANGES_FOR_PATHS:  # for each date range
             tmp_append_list = [country, date_range]  # append country and date range
             for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:  # for each pollutant key
-                for row in df_satelite_image_data_dict[country][pollutant]:
+                for row in df_satelite_image_data_dict[country.replace(' ', '_')][pollutant]:
                     if date_range in row:
                         for index in range(1, len(row)):
                             tmp_append_list.append(row[index])
@@ -567,11 +599,11 @@ if _FLAG_FOR_CREATING_COVID_IMAGES:
         print('Export covid measure images for ' + country)
         path_country = country.replace(' ', '_')
         export_id = 0
-        check_create_folders_in_path(_PATH_FOR_COVID_MEASURE_TILES + country.replace(' ', '_') + '/')
+        check_create_folders_in_path(_PATH_FOR_COVID_MEASURE_TILES + path_country + '/')
         for date_range in _LIST_DATE_RANGES_FOR_PATHS:
             for measure in _LIST_COVID_MEASURES:
                 for i in range(0, len(df_acnn)):
-                    if path_country == df_acnn[i][0] and date_range == df_acnn[i][1]:
+                    if country == df_acnn[i][0] and date_range == df_acnn[i][1]:
                         norm_value = (df_dict_acnn[measure][i] / 4.0) * 255
                         tmp_measure_img = create_measure_img(norm_value, _TILE_SIZE, _TILE_SIZE)
                         img_export_path = (_PATH_FOR_COVID_MEASURE_TILES + path_country + '/' + path_country + '_' +
@@ -586,28 +618,33 @@ if _FLAG_FOR_CREATING_COVID_IMAGES:
 if _FLAG_FOR_TRAINING_UNET:
     epochs = _EPOCHS
     nn_uNet = my_uNet.MyUNet()
-    nn_uNet.set_uNet(height=_TILE_SIZE, width=_TILE_SIZE, channels_input=10, channels_output=2, n_filters=16)
+    input_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH) + len(_LIST_COVID_MEASURES)
+    output_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH)
+    nn_uNet.set_uNet(height=_TILE_SIZE, width=_TILE_SIZE, channels_input=input_channels,
+                     channels_output=output_channels, n_filters=16)
 
     import_img_path_folder = _PATH_FOR_SAT_IMAGE_TILES
     import_img_path_covid_folder = _PATH_FOR_COVID_MEASURE_TILES
-    # country = 'Albania'
+
     tmp_results_index = 0
-    export_train_val_test_data_path_with_epochs = _PATH_FOR_TRAIN_VAL_TEST_INDEXES + 'epochs_' + str(epochs).zfill(
-        4) + '/'
-    check_create_folders_in_path(export_train_val_test_data_path_with_epochs)
-    clear_dir_files(export_train_val_test_data_path_with_epochs)
+    clear_dir_files(_PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS)
     start_time = dt.datetime.now()
-    for country in _LIST_UNIQUE_COUNTRIES:
+
+    for country in ['Albania']:  # _LIST_UNIQUE_COUNTRIES:
+        path_country = country.replace(' ', '_')
         print('\n\n\n')
-        print('Train uNet for ' + country + ' ' + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
+        print('Train uNet for ' + country + '(%s) ' % path_country + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
         print('Process started at: ', start_time.strftime("(%Y-%m-%d %H:%M:%S)"))
         dict_with_tile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
-            list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
+            list_img_path_dir=import_img_path_folder + path_country + '/',
             list_pollution=_LIST_POLLUTION_IDS_NAMES_IN_PATH,
             list_date_range=_LIST_DATE_RANGES_FOR_PATHS)
 
+        print(dict_week_start_end_ranges)
+        print(dict_week_start_end_ranges['carbon_monoxide'].__len__())
+
         dict_with_covid_paths, dict_covid_week_start_end_ranges, dict_covid_export_index = my_geo_img.find_tile_paths_matches(
-            list_img_path_dir=import_img_path_covid_folder + country.replace(' ', '_') + '/',
+            list_img_path_dir=import_img_path_covid_folder + path_country + '/',
             list_pollution=_LIST_COVID_MEASURES,
             list_date_range=_LIST_DATE_RANGES_FOR_PATHS)
 
@@ -615,24 +652,24 @@ if _FLAG_FOR_TRAINING_UNET:
         df_ys = []
         # print(len(dict_with_dtile_paths[pollution_keywords_in_path[0]]))
         # print(len(dict_covid_export_index[covid_measures_headers[0]]))
-        min_keywords_len = None
+        min_pollutant_keywords_len = None
         for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:
-            if min_keywords_len is None:
-                min_keywords_len = len(dict_with_tile_paths[pollutant])
+            if min_pollutant_keywords_len is None:
+                min_pollutant_keywords_len = len(dict_with_tile_paths[pollutant])
             else:
-                if len(dict_with_tile_paths[pollutant]) < min_keywords_len:
-                    min_keywords_len = len(dict_with_tile_paths[pollutant])
+                if len(dict_with_tile_paths[pollutant]) < min_pollutant_keywords_len:
+                    min_pollutant_keywords_len = len(dict_with_tile_paths[pollutant])
 
         min_covid_keywords_len = None
-        for pollutant in _LIST_COVID_MEASURES:
+        for covid in _LIST_COVID_MEASURES:
             if min_covid_keywords_len is None:
-                min_covid_keywords_len = len(dict_with_covid_paths[pollutant])
+                min_covid_keywords_len = len(dict_with_covid_paths[covid])
             else:
-                if len(dict_with_covid_paths[pollutant]) < min_keywords_len:
-                    min_covid_keywords_len = len(dict_with_covid_paths[pollutant])
+                if len(dict_with_covid_paths[covid]) < min_pollutant_keywords_len:
+                    min_covid_keywords_len = len(dict_with_covid_paths[covid])
 
-        if min_keywords_len != 0 and min_covid_keywords_len != 0:
-            for paths_id in range(0, min_keywords_len):
+        if min_pollutant_keywords_len != 0 and min_covid_keywords_len != 0:
+            for paths_id in range(0, min_pollutant_keywords_len):
                 tmp_xs = []
                 tmp_ys = []
                 for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:
@@ -677,7 +714,7 @@ if _FLAG_FOR_TRAINING_UNET:
                                       pd.DataFrame.from_dict({'val_indexes': valid_indexes}),
                                       pd.DataFrame.from_dict({'test_indexes': test_indexes})]
 
-            export_train_val_test_dir_path = export_train_val_test_data_path_with_epochs + country + '/'
+            export_train_val_test_dir_path = _PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS + country + '/'
             check_create_folders_in_path(export_train_val_test_dir_path)
             for df_array in df_dict_train_val_test:
                 export_train_val_test_file_path = export_train_val_test_dir_path + country + '_' + df_array.keys()[
@@ -690,7 +727,7 @@ if _FLAG_FOR_TRAINING_UNET:
                                          Y_val=df_ys[valid_indexes],
                                          export_model_path=_PATH_FOR_NN_MODEL + 'pollutant_tile_model_' + str(
                                              epochs) + '_epochs.h5',
-                                         export_model_name_path=_PATH_FOR_NN_MODEL_NAME + 'pollutant_tile_model_name' + str(
+                                         export_model_name_path=_PATH_FOR_NN_MODEL_NAME + 'pollutant_tile_model_name_' + str(
                                              epochs) + '_epochs.h5',
                                          epochs=epochs)
     end_time = dt.datetime.now()
@@ -707,28 +744,25 @@ if _FLAG_FOR_TRAINING_UNET:
 if _FLAG_FOR_TESTING_UNET:
     epochs = _EPOCHS
     nn_uNet = my_uNet.MyUNet()
-    nn_uNet.set_uNet(height=_TILE_SIZE, width=_TILE_SIZE, channels_input=10, channels_output=2, n_filters=16)
+    input_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH) + len(_LIST_COVID_MEASURES)
+    output_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH)
     path_to_model = _PATH_FOR_NN_MODEL + 'pollutant_tile_model_' + str(epochs) + '_epochs.h5'
+    nn_uNet.set_uNet(height=_TILE_SIZE, width=_TILE_SIZE, channels_input=input_channels,
+                     channels_output=output_channels, n_filters=16)
     nn_uNet.load_model(path_to_model)
-
-    _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide', 'ozone']
-    _LIST_COVID_MEASURES = ['RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
-                            'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
-                            'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']
 
     import_img_path_folder = _PATH_FOR_SAT_IMAGE_TILES
     import_img_path_covid_folder = _PATH_FOR_COVID_MEASURE_TILES
-    import_test_indexes = xport_train_val_test_data_path_with_epochs = _PATH_FOR_TRAIN_VAL_TEST_INDEXES + 'epochs_' + str(
-        epochs).zfill(4) + '/'
+    import_train_test_valid_indexes = _PATH_FOR_TRAIN_VAL_TEST_INDEXES + 'epochs_' + str(epochs).zfill(4) + '/'
 
-    list_country_dir = os.listdir(import_test_indexes)
+    list_country_dir = os.listdir(import_train_test_valid_indexes)
 
-    total_score = [0, 0]
+    total_score = [0, 0, 0, 0]
     total_div_score = 0
     total_score_str_list = []
     # for in_country in list_country_dir:
     export_file_tmp = open('export_data/uNet_Test_Scores.txt', 'a')
-    for in_country in ['Albania']:
+    for in_country in ['Albania']:  # _LIST_UNIQUE_COUNTRIES:
         country = in_country.replace('_', ' ')
         print('\n\n\n')
         print('Test uNet for ' + country + ' ' + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
@@ -744,28 +778,33 @@ if _FLAG_FOR_TESTING_UNET:
 
         df_xs = []
         df_ys = []
+        df_start_date_range = []
         # print(len(dict_with_dtile_paths[pollution_keywords_in_path[0]]))
         # print(len(dict_covid_export_index[covid_measures_headers[0]]))
-        min_keywords_len = None
+
+        # Check if images exists
+        min_pollutant_keywords_len = None
         for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:
-            if min_keywords_len is None:
-                min_keywords_len = len(dict_with_tile_paths[pollutant])
+            if min_pollutant_keywords_len is None:
+                min_pollutant_keywords_len = len(dict_with_tile_paths[pollutant])
             else:
-                if len(dict_with_tile_paths[pollutant]) < min_keywords_len:
-                    min_keywords_len = len(dict_with_tile_paths[pollutant])
+                if len(dict_with_tile_paths[pollutant]) < min_pollutant_keywords_len:
+                    min_pollutant_keywords_len = len(dict_with_tile_paths[pollutant])
 
         min_covid_keywords_len = None
-        for pollutant in _LIST_COVID_MEASURES:
+        for covid in _LIST_COVID_MEASURES:
             if min_covid_keywords_len is None:
-                min_covid_keywords_len = len(dict_with_covid_paths[pollutant])
+                min_covid_keywords_len = len(dict_with_covid_paths[covid])
             else:
-                if len(dict_with_covid_paths[pollutant]) < min_keywords_len:
-                    min_covid_keywords_len = len(dict_with_covid_paths[pollutant])
+                if len(dict_with_covid_paths[covid]) < min_pollutant_keywords_len:
+                    min_covid_keywords_len = len(dict_with_covid_paths[covid])
 
-        if min_keywords_len != 0 and min_covid_keywords_len != 0:
-            for paths_id in range(0, min_keywords_len):
+        # If tiles exist then test the uNet
+        if min_pollutant_keywords_len != 0 and min_covid_keywords_len != 0:
+            for paths_id in range(0, min_pollutant_keywords_len):
                 tmp_xs = []
                 tmp_ys = []
+                tmp_start_date_range = []
                 for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:
                     if pollutant is _LIST_POLLUTION_IDS_NAMES_IN_PATH[0]:
                         for covid_keyword in _LIST_COVID_MEASURES:
@@ -777,24 +816,41 @@ if _FLAG_FOR_TESTING_UNET:
                                         dict_with_covid_paths[covid_keyword][covid_id][0])
                                     tmp_xs.append(x_img)
                                     break
-
                     x_img = my_geo_img.open_image_file(dict_with_tile_paths[pollutant][paths_id][0])  # this week
                     y_img = my_geo_img.open_image_file(dict_with_tile_paths[pollutant][paths_id][1])  # next week
+                    date_range = dict_week_start_end_ranges[pollutant][paths_id][0] + '_' + \
+                                 dict_week_start_end_ranges[pollutant][paths_id][1]
+
                     tmp_xs.append(x_img)
                     tmp_ys.append(y_img)
+                    tmp_start_date_range.append(date_range)
                 tmp_xs = np.array(tmp_xs).T
                 tmp_ys = np.array(tmp_ys).T
                 df_xs.append(tmp_xs)
                 df_ys.append(tmp_ys)
+                df_start_date_range.append(tmp_start_date_range)
 
             df_xs = np.array(df_xs) / 255.0
             df_ys = np.array(df_ys) / 255.0
 
-            test_indexes = pd.read_csv(import_test_indexes + in_country + '/' + in_country + '_' +
-                                       'test_indexes.csv')['test_indexes'].values.tolist()
+            train_indexes = \
+                pd.read_csv(import_train_test_valid_indexes + in_country + '/' + in_country + '_' +
+                            'train_indexes.csv')['train_indexes'].values.tolist()
+            test_indexes = \
+                pd.read_csv(import_train_test_valid_indexes + in_country + '/' + in_country + '_' +
+                            'test_indexes.csv')['test_indexes'].values.tolist()
+            val_indexes = \
+                pd.read_csv(import_train_test_valid_indexes + in_country + '/' + in_country + '_' +
+                            'val_indexes.csv')['val_indexes'].values.tolist()
 
-            country_score = nn_uNet.test_uNet(df_xs[test_indexes], df_ys[test_indexes])
-            total_score += country_score
-            total_div_score += 1
-            message = country + '_score= ' + ''.join(str(e) + ', ' for e in country_score)
-            export_file_tmp.write(country + '_score= ')
+            print(df_ys[test_indexes][0][0])
+            print(df_ys[test_indexes].shape)
+
+            MAE_train_score, MSE_train_score, MAX_train_score, Avg_train_real, Stdev_train_real, \
+            Avg_train_pred, Stdev_train_pred = nn_uNet.test_uNet(df_xs[train_indexes], df_ys[train_indexes])
+
+            MAE_test_score, MSE_test_score, MAX_test_score, Avg_test_real, Stdev_test_real, \
+            Avg_test_pred, Stdev_test_pred = nn_uNet.test_uNet(df_xs[test_indexes], df_ys[test_indexes])
+
+            MAE_val_score, MSE_val_score, MAX_val_score, Avg_val_real, Stdev_val_real, \
+            Avg_val_pred, Stdev_val_pred = nn_uNet.test_uNet(df_xs[val_indexes], df_ys[val_indexes])

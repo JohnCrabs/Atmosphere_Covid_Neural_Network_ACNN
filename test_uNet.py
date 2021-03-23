@@ -1,6 +1,8 @@
 # %tensorflow_version 1.x
 import tensorflow as tf
 import keras
+import numpy as np
+from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
 
 # ---------------------------------- #
 
@@ -93,29 +95,56 @@ class MyUNet:
 
         return results
 
-    def test_uNet(self, X_test, Y_test, norm_max, norm_min):
-        import numpy as np
-        predict_values = self.UnetCustMod.predict(X_test)
+    def test_uNet(self, X_test, Y_test):
+        # X_text = [None, 32, 32, 12]
+        # Y_text = [None, 32, 32, 4]
+        Y_pred = self.UnetCustMod.predict(X_test)
 
-        denorm_pred = []
-        denorm_Y = []
+        MAE_scores = []
+        MSE_scores = []
+        MAXE_scores = []
+        Avg_test = []
+        Avg_pred = []
+        Stdev_test = []
+        Stdev_pred = []
 
-        for index in range(Y_test.shape[2]):
-            tmp_denorm_pred = predict_values[index] * norm_max[index] / 255.0
-            tmp_denorm_pred = (norm_max[index] - norm_min[index]) / (tmp_denorm_pred[index] - norm_min[index])
-            denorm_pred.append(tmp_denorm_pred)
+        for img_to_check in range(0, Y_test.shape[0]):
+            tmp_MAE = []
+            tmp_MSE = []
+            tmp_MAXE = []
+            tmp_Avg_test = []
+            tmp_Avg_pred = []
+            tmp_Stdev_test = []
+            tmp_Stdev_pred = []
+            # Calculate Estimation for CO
+            for val_id in range(0, Y_test.shape[3]):
+                MAE = mean_absolute_error(Y_test[img_to_check, :, :, val_id].flatten(),
+                                          Y_pred[img_to_check, :, :, val_id].flatten())
 
-            tmp_denorm_Y = Y_test * norm_max / 255.0
-            tmp_denorm_Y = (norm_max[index] - norm_min[index]) / (tmp_denorm_Y[index] - norm_min[index])
-            denorm_Y.append(tmp_denorm_Y)
+                MSE = mean_squared_error(Y_test[img_to_check, :, :, val_id].flatten(),
+                                         Y_pred[img_to_check, :, :, val_id].flatten())
 
-        # Error calculation
-        diff_vals = np.array(denorm_pred) - np.array(denorm_Y)
-        # root_mean_sqrt = np.sqrt(np.sum(diff_vals) / Y_test.shape[0]*Y_test.shape[1])
-        # stdev_root_mean_sqrt =
-        # mean_absolute_error =
-        # stdev_mean_absolute_error =
-        max_error = [e.max() for e in diff_vals]
+                MAXE = max_error(Y_test[img_to_check, :, :, val_id].flatten(),
+                                 Y_pred[img_to_check, :, :, val_id].flatten())
+
+                tmp_Avg_test.append(np.mean(Y_test[img_to_check, :, :, val_id].flatten()))
+                tmp_Stdev_test.append(np.std(Y_test[img_to_check, :, :, val_id].flatten()))
+                tmp_Avg_pred.append(np.mean(Y_pred[img_to_check, :, :, val_id].flatten()))
+                tmp_Stdev_pred.append(np.std(Y_pred[img_to_check, :, :, val_id].flatten()))
+
+                tmp_MAE.append(MAE)
+                tmp_MSE.append(MSE)
+                tmp_MAXE.append(MAXE)
+
+            MAE_scores.append(tmp_MAE)
+            MSE_scores.append(tmp_MSE)
+            MAXE_scores.append(tmp_MAXE)
+            Avg_test.append(tmp_Avg_test)
+            Stdev_test.append(tmp_Stdev_test)
+            Avg_pred.append(tmp_Avg_pred)
+            Stdev_pred.append(tmp_Stdev_pred)
+
+        return MAE_scores, MSE_scores, MAXE_scores, Avg_test, Stdev_test, Avg_pred, Stdev_pred
 
     def predict_uNet(self, X_pred):
         predictions = self.UnetCustMod.predict(X_pred)
