@@ -35,7 +35,7 @@ _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES = _OFF  # a flag for time savin
 _FLAG_FOR_BREAKING_SENTINEL_IMAGES_TO_TILES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_CREATING_DTILES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_CREATING_COVID_IMAGES = _OFF  # a flag for time saving purposes
-_FLAG_FOR_TRAINING_UNET = _ON  # a flag for time saving purposes
+_FLAG_FOR_TRAINING_UNET = _OFF  # a flag for time saving purposes
 _FLAG_FOR_TESTING_UNET = _ON  # a flag for time saving purposes
 
 S05_SCALE_M_PER_PX = 5000
@@ -70,6 +70,7 @@ _PATH_FOR_SAT_RAW_IMAGES_DIR = _PATH_PRIMARY_DIR + 'Satellite_Atmospheric_Images
 _PATH_FOR_COVID_DATE_RANGES_MEASURES_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_covid_date_range_measures.csv"
 _PATH_FOR_S05_DATE_RANGES_POLLUTANT_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_s05_date_range_pollutants_statistics.csv"
 
+_PATH_FOR_POLLUTANT_MODEL_DIR = 'carbon_monoxide/'
 
 # ----------------------------------------- #
 # ---------- 1) Define Functions ---------- #
@@ -136,22 +137,22 @@ def create_dictionary_from_list_column(list_input: [], key_column_index: int):
         # if value is not in dictionary (prevents destroy the list)
         if d_row[key_column_index] not in dict_output.keys():
             dict_output[d_row[key_column_index]] = []  # create a new dictionary with empty key
-        tmp_list = []  # create a temporary list (for append)
+        tmp_list_ = []  # create a temporary list (for append)
         for func_index in range(0, len(d_row)):  # for func_index in range()
             if func_index != key_column_index:  # if func_index is different than key_column_index (exclude this value)
-                tmp_list.append(d_row[func_index])  # append value to tmp_list
-        dict_output[d_row[key_column_index]].append(tmp_list)  # append the list to new list
+                tmp_list_.append(d_row[func_index])  # append value to tmp_list
+        dict_output[d_row[key_column_index]].append(tmp_list_)  # append the list to new list
     return dict_output  # return the dictionary
 
 
 def create_measure_img(measure_value, width_size, height_size):
-    tmp_list = []
+    tmp_list_ = []
     for _ in range(width_size):
         tmp_wid = []
         for __ in range(height_size):
             tmp_wid.append(measure_value)
-        tmp_list.append(tmp_wid)
-    return tmp_list
+        tmp_list_.append(tmp_wid)
+    return tmp_list_
 
 
 # --------------------------------------------- #
@@ -218,11 +219,31 @@ _LIST_ACNN_COVID_MEASURES_HEADERS = ['COUNTRY', 'DATE_RANGE', 'RESTRICTIONS_INTE
                                      'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES']
 
 _LIST_POLLUTION_STATISTIC_HEADER = ['DATE_RANGE', 'MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN']
-_LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide', 'ozone', 'sulphur_dioxide', 'nitrogen_dioxide']
+# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide', 'ozone', 'sulphur_dioxide', 'nitrogen_dioxide']
+_LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide']
+# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['ozone']
+# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['sulphur_dioxide']
+# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['nitrogen_dioxide']
 _DICT_POLLUTANTS_MIN_MAX_RANGES = {'carbon_monoxide': {'min': 0.000, 'max': 0.060},
                                    'ozone': {'min': 0.100, 'max': 0.170},
                                    'sulphur_dioxide': {'min': 0.000, 'max': 0.002},
                                    'nitrogen_dioxide': {'min': 0.00003, 'max': 0.00013}}  # mol/m^2
+
+# _LIST_OF_TRAIN_TEST_VAL_EXPORTED_NN = ['COUNTRY', 'START_DATE_RANGE', 'TILE_ID', 'SET_ID',
+#                                        'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+#                                        'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+#                                        'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES',
+#                                        'CO_ACTUAL', 'O3_ACTUAL', 'SO2_ACTUAL', 'NO2_ACTUAL',
+#                                        'CO_PREDICT', 'O3_PREDICT', 'SO2_PREDICT', 'NO2_PREDICT',
+#                                        'CO_MAE', 'CO_MSE', 'CO_MAXE', 'O3_MAE', 'O3_MSE', 'O3_MAXE',
+#                                        'NO2_MAE', 'NO2_MSE', 'NO2_MAXE', 'SO2_MAE', 'SO2_MSE', 'SO2_MAXE']
+
+_LIST_OF_TRAIN_TEST_VAL_EXPORTED_NN = ['COUNTRY', 'START_DATE_RANGE', 'TILE_ID', 'SET_ID',
+                                       'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+                                       'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+                                       'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES', 'CO_CURRENT',
+                                       'CO_ACTUAL', 'CO_ACTUAL_STDEV', 'CO_PREDICT', 'CO_PREDICT_STDEV',
+                                       'CO_MAE', 'CO_MSE', 'CO_MAXE']
 
 # df_x_plot and df_y_plot used to export plots (for data visualization)
 _STR_X_AXIS_PLOT = _LIST_COVID_MEASURES_HEADERS_FOR_POLLUTION[0]
@@ -630,7 +651,7 @@ if _FLAG_FOR_TRAINING_UNET:
     clear_dir_files(_PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS)
     start_time = dt.datetime.now()
 
-    for country in ['Albania']:  # _LIST_UNIQUE_COUNTRIES:
+    for country in _LIST_UNIQUE_COUNTRIES:
         path_country = country.replace(' ', '_')
         print('\n\n\n')
         print('Train uNet for ' + country + '(%s) ' % path_country + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
@@ -640,8 +661,8 @@ if _FLAG_FOR_TRAINING_UNET:
             list_pollution=_LIST_POLLUTION_IDS_NAMES_IN_PATH,
             list_date_range=_LIST_DATE_RANGES_FOR_PATHS)
 
-        print(dict_week_start_end_ranges)
-        print(dict_week_start_end_ranges['carbon_monoxide'].__len__())
+        # print(dict_week_start_end_ranges)
+        # print(dict_week_start_end_ranges['carbon_monoxide'].__len__())
 
         dict_with_covid_paths, dict_covid_week_start_end_ranges, dict_covid_export_index = my_geo_img.find_tile_paths_matches(
             list_img_path_dir=import_img_path_covid_folder + path_country + '/',
@@ -746,7 +767,7 @@ if _FLAG_FOR_TESTING_UNET:
     nn_uNet = my_uNet.MyUNet()
     input_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH) + len(_LIST_COVID_MEASURES)
     output_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH)
-    path_to_model = _PATH_FOR_NN_MODEL + 'pollutant_tile_model_' + str(epochs) + '_epochs.h5'
+    path_to_model = _PATH_FOR_NN_MODEL + _PATH_FOR_POLLUTANT_MODEL_DIR + 'pollutant_tile_model_' + str(epochs) + '_epochs.h5'
     nn_uNet.set_uNet(height=_TILE_SIZE, width=_TILE_SIZE, channels_input=input_channels,
                      channels_output=output_channels, n_filters=16)
     nn_uNet.load_model(path_to_model)
@@ -761,31 +782,47 @@ if _FLAG_FOR_TESTING_UNET:
     total_div_score = 0
     total_score_str_list = []
     # for in_country in list_country_dir:
-    export_file_tmp = open('export_data/uNet_Test_Scores.txt', 'a')
-    for in_country in ['Albania']:  # _LIST_UNIQUE_COUNTRIES:
-        country = in_country.replace('_', ' ')
-        print('\n\n\n')
-        print('Test uNet for ' + country + ' ' + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
+    df_results_csv = [_LIST_OF_TRAIN_TEST_VAL_EXPORTED_NN]
+    print('\n\n\n')
+    for in_country in _LIST_UNIQUE_COUNTRIES:  # for each country
+        path_country = in_country.replace(' ', '_')  # create path country
+        print()
+        print('Test uNet for ' + in_country + ' ' + dt.datetime.now().strftime("(%Y-%m-%d %H:%M:%S)"))
+
+        # load pollutant image paths
         dict_with_tile_paths, dict_week_start_end_ranges, dict_export_index = my_geo_img.find_tile_paths_matches(
-            list_img_path_dir=import_img_path_folder + country.replace(' ', '_') + '/',
+            list_img_path_dir=import_img_path_folder + path_country + '/',
             list_pollution=_LIST_POLLUTION_IDS_NAMES_IN_PATH,
             list_date_range=_LIST_DATE_RANGES_FOR_PATHS)
 
+        # load covid image paths
         dict_with_covid_paths, dict_covid_week_start_end_ranges, dict_covid_export_index = my_geo_img.find_tile_paths_matches(
-            list_img_path_dir=import_img_path_covid_folder + country.replace(' ', '_') + '/',
+            list_img_path_dir=import_img_path_covid_folder + path_country + '/',
             list_pollution=_LIST_COVID_MEASURES,
             list_date_range=_LIST_DATE_RANGES_FOR_PATHS)
 
-        df_xs = []
-        df_ys = []
-        df_start_date_range = []
-        # print(len(dict_with_dtile_paths[pollution_keywords_in_path[0]]))
-        # print(len(dict_covid_export_index[covid_measures_headers[0]]))
+        # 'COUNTRY', 'START_DATE_RANGE', 'TILE_ID', 'SET_ID',
+        # 'RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+        # 'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+        # 'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES',
+        # 'CO_ACTUAL', 'O3_ACTUAL', 'SO2_ACTUAL', 'NO2_ACTUAL',
+        # 'CO_PREDICT', 'O3_PREDICT', 'SO2_PREDICT', 'NO2_PREDICT',
+        # 'CO_MAE', 'CO_MSE', 'CO_MAXE', 'O3_MAE', 'O3_MSE', 'O3_MAXE',
+        # 'NO2_MAE', 'NO2_MSE', 'NO2_MAXE', 'SO2_MAE', 'SO2_MSE', 'SO2_MAXE'
+
+        df_country = in_country  # create var for country (COUNTRY)
+        df_start_date_range = []  # create list for dates (START_DATE_RANGE)
+        df_xs = []  # create list for xs ('RESTRICTIONS_INTERNAL_MOVEMENTS', 'INTERNATIONAL_TRAVEL_CONTROLS',
+        # 'CANCEL_PUBLIC_EVENTS', 'RESTRICTION_GATHERINGS', 'CLOSE_PUBLIC_TRANSPORT',
+        # 'SCHOOL_CLOSURES', 'STAY_HOME_REQUIREMENTS', 'WORKPLACE_CLOSURES')
+        df_ys = []  # create list for ys ('CO_ACTUAL', 'O3_ACTUAL', 'SO2_ACTUAL', 'NO2_ACTUAL')
+
+        df_covid_measures_values = []  # create a list for covid measures
 
         # Check if images exists
-        min_pollutant_keywords_len = None
-        for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:
-            if min_pollutant_keywords_len is None:
+        min_pollutant_keywords_len = None  # check if there are pollutant images
+        for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:  # for each pollutant path in folder
+            if min_pollutant_keywords_len is None:  #
                 min_pollutant_keywords_len = len(dict_with_tile_paths[pollutant])
             else:
                 if len(dict_with_tile_paths[pollutant]) < min_pollutant_keywords_len:
@@ -805,6 +842,7 @@ if _FLAG_FOR_TESTING_UNET:
                 tmp_xs = []
                 tmp_ys = []
                 tmp_start_date_range = []
+                tmp_measures_values = []
                 for pollutant in _LIST_POLLUTION_IDS_NAMES_IN_PATH:
                     if pollutant is _LIST_POLLUTION_IDS_NAMES_IN_PATH[0]:
                         for covid_keyword in _LIST_COVID_MEASURES:
@@ -843,14 +881,89 @@ if _FLAG_FOR_TESTING_UNET:
                 pd.read_csv(import_train_test_valid_indexes + in_country + '/' + in_country + '_' +
                             'val_indexes.csv')['val_indexes'].values.tolist()
 
-            print(df_ys[test_indexes][0][0])
-            print(df_ys[test_indexes].shape)
+            # print(df_ys[test_indexes][0][0])
+            # print(df_ys[test_indexes].shape)
 
-            MAE_train_score, MSE_train_score, MAX_train_score, Avg_train_real, Stdev_train_real, \
+            # ('CO_PREDICT', 'O3_PREDICT', 'SO2_PREDICT', 'NO2_PREDICT',
+            #  'CO_MAE', 'CO_MSE', 'CO_MAXE', 'O3_MAE', 'O3_MSE', 'O3_MAXE',
+            #  'NO2_MAE', 'NO2_MSE', 'NO2_MAXE', 'SO2_MAE', 'SO2_MSE', 'SO2_MAXE')
+            MAE_train_score, MSE_train_score, MAXE_train_score, Avg_train_real, Stdev_train_real, \
             Avg_train_pred, Stdev_train_pred = nn_uNet.test_uNet(df_xs[train_indexes], df_ys[train_indexes])
 
-            MAE_test_score, MSE_test_score, MAX_test_score, Avg_test_real, Stdev_test_real, \
+            MAE_test_score, MSE_test_score, MAXE_test_score, Avg_test_real, Stdev_test_real, \
             Avg_test_pred, Stdev_test_pred = nn_uNet.test_uNet(df_xs[test_indexes], df_ys[test_indexes])
 
-            MAE_val_score, MSE_val_score, MAX_val_score, Avg_val_real, Stdev_val_real, \
+            MAE_val_score, MSE_val_score, MAXE_val_score, Avg_val_real, Stdev_val_real, \
             Avg_val_pred, Stdev_val_pred = nn_uNet.test_uNet(df_xs[val_indexes], df_ys[val_indexes])
+
+            train_indexes_set = set(train_indexes)
+            test_indexes_set = set(test_indexes)
+            val_indexes_set = set(val_indexes)
+
+            # print(df_results_csv[0])
+            for i in range(0, df_xs.shape[0]):
+                tmp_list = [in_country, df_start_date_range[i][0], i]
+                tmp_type = None
+                if i in train_indexes_set:
+                    tmp_type = 'train'
+                elif i in test_indexes_set:
+                    tmp_type = 'test'
+                elif i in val_indexes_set:
+                    tmp_type = 'validation'
+                else:
+                    tmp_list.append('none')
+                    for j in range(4, len(_LIST_OF_TRAIN_TEST_VAL_EXPORTED_NN)):
+                        tmp_list.append('none')
+                    # print(tmp_list)
+                    continue
+                tmp_list.append(tmp_type)
+                for j in range(0, df_xs[i].T.shape[0]):
+                    value = np.mean(df_xs[i].T[j])
+                    tmp_list.append(np.round(value, 2))
+
+                if tmp_type == 'train':
+                    index = 0
+                    for j in range(0, len(train_indexes)):
+                        if i == train_indexes[j]:
+                            index = j
+                            break
+                    tmp_list.append(Avg_train_real[index][0])
+                    tmp_list.append(Stdev_train_real[index][0])
+                    tmp_list.append(Avg_train_pred[index][0])
+                    tmp_list.append(Stdev_train_pred[index][0])
+                    tmp_list.append(MAE_train_score[index][0])
+                    tmp_list.append(MSE_train_score[index][0])
+                    tmp_list.append(MAXE_train_score[index][0])
+
+                elif tmp_type == 'test':
+                    index = 0
+                    for j in range(0, len(test_indexes)):
+                        if i == test_indexes[j]:
+                            index = j
+                            break
+                    tmp_list.append(Avg_test_real[index][0])
+                    tmp_list.append(Stdev_test_real[index][0])
+                    tmp_list.append(Avg_test_pred[index][0])
+                    tmp_list.append(Stdev_test_pred[index][0])
+                    tmp_list.append(MAE_test_score[index][0])
+                    tmp_list.append(MSE_test_score[index][0])
+                    tmp_list.append(MAXE_test_score[index][0])
+
+                elif tmp_type == 'validation':
+                    index = 0
+                    for j in range(0, len(val_indexes)):
+                        if i == val_indexes[j]:
+                            index = j
+                            break
+                    tmp_list.append(Avg_val_real[index][0])
+                    tmp_list.append(Stdev_val_real[index][0])
+                    tmp_list.append(Avg_val_pred[index][0])
+                    tmp_list.append(Stdev_val_pred[index][0])
+                    tmp_list.append(MAE_val_score[index][0])
+                    tmp_list.append(MSE_val_score[index][0])
+                    tmp_list.append(MAXE_val_score[index][0])
+
+                # print(tmp_list)
+                df_results_csv.append(tmp_list)
+    export_csv_path = _PATH_PRIMARY_DIR + 'uNet_results.csv'
+    my_cal_v2.write_csv(export_csv_path, df_results_csv)
