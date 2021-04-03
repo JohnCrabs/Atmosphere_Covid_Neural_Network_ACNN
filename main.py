@@ -35,7 +35,7 @@ _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES = _OFF  # a flag for time savin
 _FLAG_FOR_BREAKING_SENTINEL_IMAGES_TO_TILES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_CREATING_DTILES = _OFF  # a flag for time saving purposes
 _FLAG_FOR_CREATING_COVID_IMAGES = _OFF  # a flag for time saving purposes
-_FLAG_FOR_TRAINING_UNET = _OFF  # a flag for time saving purposes
+_FLAG_FOR_TRAINING_UNET = _ON  # a flag for time saving purposes
 _FLAG_FOR_TESTING_UNET = _ON  # a flag for time saving purposes
 
 S05_SCALE_M_PER_PX = 5000
@@ -70,7 +70,13 @@ _PATH_FOR_SAT_RAW_IMAGES_DIR = _PATH_PRIMARY_DIR + 'Satellite_Atmospheric_Images
 _PATH_FOR_COVID_DATE_RANGES_MEASURES_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_covid_date_range_measures.csv"
 _PATH_FOR_S05_DATE_RANGES_POLLUTANT_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_s05_date_range_pollutants_statistics.csv"
 
-_PATH_FOR_POLLUTANT_MODEL_DIR = 'carbon_monoxide/'
+# _PATH_FOR_POLLUTANT_MODEL_DIR = 'carbon_monoxide/'
+_PATH_FOR_POLLUTANT_MODEL_DIR = 'ozone/'
+
+
+# _PATH_FOR_POLLUTANT_MODEL_DIR = 'nitrogen_dioxide/'
+# _PATH_FOR_POLLUTANT_MODEL_DIR = 'sulphur_dioxide/'
+
 
 # ----------------------------------------- #
 # ---------- 1) Define Functions ---------- #
@@ -93,7 +99,7 @@ def check_create_folders_in_path(path):
     """
     if not os.path.exists(path):  # if path does not exist
         os.makedirs(path)  # create path
-        print('Path succesfully created: ' + path)  # print message
+        print('Path successfully created: ' + path)  # print message
     else:  # print message
         print('Path already exists: ' + path)  # print message
 
@@ -127,7 +133,7 @@ def find_unique_values_list(list_input: []):
 
 def create_dictionary_from_list_column(list_input: [], key_column_index: int):
     """
-    create a dictionary from the list collumns
+    create a dictionary from the list columns
     :param list_input:
     :param key_column_index:
     :return:
@@ -220,8 +226,8 @@ _LIST_ACNN_COVID_MEASURES_HEADERS = ['COUNTRY', 'DATE_RANGE', 'RESTRICTIONS_INTE
 
 _LIST_POLLUTION_STATISTIC_HEADER = ['DATE_RANGE', 'MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN']
 # _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide', 'ozone', 'sulphur_dioxide', 'nitrogen_dioxide']
-_LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide']
-# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['ozone']
+# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide']
+_LIST_POLLUTION_IDS_NAMES_IN_PATH = ['ozone']
 # _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['sulphur_dioxide']
 # _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['nitrogen_dioxide']
 _DICT_POLLUTANTS_MIN_MAX_RANGES = {'carbon_monoxide': {'min': 0.000, 'max': 0.060},
@@ -263,7 +269,7 @@ _LIST_Y_AXIS_PLOT = _LIST_COVID_MEASURES_HEADERS_FOR_POLLUTION[1:]
 # WORKPLACES,RESIDENTIAL: None            TESTING_POLICY: None                       CONTACT_TRACING: Covid
 # CONTAINMENT_INDEX: None                 STRINGENCY_INDEX: None                     VACCINATION_POLICY: Covid
 # DEPT_RELIEF: None                       FACIAL_COVERING: None                      INCOME_SUPPORT: None
-# RESTRICTIONS_INTERNAL_MOVEMENTS: Covid, Pollution   
+# RESTRICTIONS_INTERNAL_MOVEMENTS: Covid, Pollution
 # INTERNATIONAL_TRAVEL_CONTROLS: Covid, Pollution
 # CONTINENT: Covid, Pollution             TOTAL_CASES: Covid                         NEW_CASES: Covid
 # NEW_CASES_SMOOTHED: Covid               TOTAL_DEATHS: Covid                        NEW_DEATHS: Covid
@@ -650,7 +656,8 @@ if _FLAG_FOR_TRAINING_UNET:
     tmp_results_index = 0
     clear_dir_files(_PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS)
     start_time = dt.datetime.now()
-
+    check_create_folders_in_path(_PATH_FOR_NN_MODEL + _PATH_FOR_POLLUTANT_MODEL_DIR)
+    check_create_folders_in_path(_PATH_FOR_NN_MODEL_NAME + _PATH_FOR_POLLUTANT_MODEL_DIR)
     for country in _LIST_UNIQUE_COUNTRIES:
         path_country = country.replace(' ', '_')
         print('\n\n\n')
@@ -735,21 +742,25 @@ if _FLAG_FOR_TRAINING_UNET:
                                       pd.DataFrame.from_dict({'val_indexes': valid_indexes}),
                                       pd.DataFrame.from_dict({'test_indexes': test_indexes})]
 
-            export_train_val_test_dir_path = _PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS + country + '/'
+            export_train_val_test_dir_path = _PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS + _PATH_FOR_POLLUTANT_MODEL_DIR + \
+                                             country + '/'
             check_create_folders_in_path(export_train_val_test_dir_path)
             for df_array in df_dict_train_val_test:
                 export_train_val_test_file_path = export_train_val_test_dir_path + country + '_' + df_array.keys()[
                     0] + '.csv'
                 df_array.to_csv(export_train_val_test_file_path)
 
+
             results = nn_uNet.train_uNet(X_train=df_xs[train_indexes],
                                          Y_train=df_ys[train_indexes],
                                          X_val=df_xs[valid_indexes],
                                          Y_val=df_ys[valid_indexes],
-                                         export_model_path=_PATH_FOR_NN_MODEL + 'pollutant_tile_model_' + str(
-                                             epochs) + '_epochs.h5',
-                                         export_model_name_path=_PATH_FOR_NN_MODEL_NAME + 'pollutant_tile_model_name_' + str(
-                                             epochs) + '_epochs.h5',
+                                         export_model_path=_PATH_FOR_NN_MODEL + _PATH_FOR_POLLUTANT_MODEL_DIR +
+                                                           'pollutant_tile_model_' + str(epochs) + '_epochs.h5',
+                                         export_model_name_path=(_PATH_FOR_NN_MODEL_NAME +
+                                                                 _PATH_FOR_POLLUTANT_MODEL_DIR +
+                                                                 'pollutant_tile_model_name_' + str(epochs) +
+                                                                 '_epochs.h5'),
                                          epochs=epochs)
     end_time = dt.datetime.now()
     print()
@@ -767,14 +778,18 @@ if _FLAG_FOR_TESTING_UNET:
     nn_uNet = my_uNet.MyUNet()
     input_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH) + len(_LIST_COVID_MEASURES)
     output_channels = len(_LIST_POLLUTION_IDS_NAMES_IN_PATH)
-    path_to_model = _PATH_FOR_NN_MODEL + _PATH_FOR_POLLUTANT_MODEL_DIR + 'pollutant_tile_model_' + str(epochs) + '_epochs.h5'
+    path_to_model = _PATH_FOR_NN_MODEL + _PATH_FOR_POLLUTANT_MODEL_DIR + 'pollutant_tile_model_' + str(
+        epochs) + '_epochs.h5'
     nn_uNet.set_uNet(height=_TILE_SIZE, width=_TILE_SIZE, channels_input=input_channels,
                      channels_output=output_channels, n_filters=16)
-    nn_uNet.load_model(path_to_model)
-
+    if os.path.exists(path_to_model):
+        nn_uNet.load_model(path_to_model)
+    else:
+        print(path_to_model + ' does not exist.')
+        exit(404)
     import_img_path_folder = _PATH_FOR_SAT_IMAGE_TILES
     import_img_path_covid_folder = _PATH_FOR_COVID_MEASURE_TILES
-    import_train_test_valid_indexes = _PATH_FOR_TRAIN_VAL_TEST_INDEXES + 'epochs_' + str(epochs).zfill(4) + '/'
+    import_train_test_valid_indexes = _PATH_FOR_TRAIN_VAL_TEST_WITH_EPOCHS + _PATH_FOR_POLLUTANT_MODEL_DIR
 
     list_country_dir = os.listdir(import_train_test_valid_indexes)
 
@@ -965,5 +980,5 @@ if _FLAG_FOR_TESTING_UNET:
 
                 # print(tmp_list)
                 df_results_csv.append(tmp_list)
-    export_csv_path = _PATH_PRIMARY_DIR + 'uNet_results.csv'
+    export_csv_path = _PATH_PRIMARY_DIR + 'uNet_results_' + _PATH_FOR_POLLUTANT_MODEL_DIR + '.csv'
     my_cal_v2.write_csv(export_csv_path, df_results_csv)

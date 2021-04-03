@@ -1,6 +1,5 @@
 # %tensorflow_version 1.x
-import tensorflow as tf
-import keras
+from tensorflow import keras
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
 
@@ -28,7 +27,7 @@ def conv2d_block(input_tensor, n_filters, kernel_size=3, batchnorm=True):
 
 class MyUNet:
     def __init__(self):
-        self.UnetCustMod = None
+        self.UnetCustMod = keras.Model()
 
     def load_model(self, path):
         self.UnetCustMod.load_weights(path)
@@ -55,12 +54,12 @@ class MyUNet:
         # conv5 = conv2d_block(u5, n_filters=n_filters * 4, kernel_size=3, batchnorm=True)
         #
         u6 = keras.layers.Conv2DTranspose(n_filters * 2, (3, 3), strides=(2, 2), padding='same')(conv3)
-        u6 = keras.layers.merge.concatenate([u6, conv2])
+        u6 = keras.layers.concatenate([u6, conv2])
         u6 = keras.layers.Dropout(0.5)(u6)
         conv6 = conv2d_block(u6, n_filters=n_filters * 4, kernel_size=3, batchnorm=True)
 
         u7 = keras.layers.Conv2DTranspose(n_filters * 2, (3, 3), strides=(2, 2), padding='same')(conv6)
-        u7 = keras.layers.merge.concatenate([u7, conv1])
+        u7 = keras.layers.concatenate([u7, conv1])
         u7 = keras.layers.Dropout(0.5)(u7)
         conv7 = conv2d_block(u7, n_filters=n_filters * 4, kernel_size=3, batchnorm=True)
 
@@ -72,7 +71,7 @@ class MyUNet:
         # the following was the first approach, with custom f1 score as metrics
         # UnetCustMod.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=[f1_score])
         # this is the approach of Yu Li
-        self.UnetCustMod.compile(optimizer='sgd', loss='mse', metrics=[tf.keras.metrics.RootMeanSquaredError()])
+        self.UnetCustMod.compile(optimizer='sgd', loss='mse', metrics=[keras.metrics.RootMeanSquaredError()])
 
         self.UnetCustMod.summary()
 
@@ -90,7 +89,8 @@ class MyUNet:
         print('X_val = ', X_val.shape)
         print('X_val = ', Y_val.shape)
 
-        results = self.UnetCustMod.fit(X_train, Y_train, batch_size=4, epochs=epochs, callbacks=callbacksOptions, validation_data=(X_val, Y_val))
+        results = self.UnetCustMod.fit(X_train, Y_train, batch_size=4, epochs=epochs, callbacks=callbacksOptions,
+                                       validation_data=(X_val, Y_val))
         self.UnetCustMod.save(export_model_name_path)
 
         return results
