@@ -72,8 +72,6 @@ _PATH_FOR_S05_DATE_RANGES_POLLUTANT_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_s
 
 # _PATH_FOR_POLLUTANT_MODEL_DIR = 'carbon_monoxide/'
 _PATH_FOR_POLLUTANT_MODEL_DIR = 'ozone/'
-
-
 # _PATH_FOR_POLLUTANT_MODEL_DIR = 'nitrogen_dioxide/'
 # _PATH_FOR_POLLUTANT_MODEL_DIR = 'sulphur_dioxide/'
 
@@ -444,11 +442,11 @@ if _FLAG_FOR_PLOT_COVID_COUNTRY_FIGURES:  # If True
 
 if _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES:
     print()  # print a blank line
-    df_satelite_image_data_dict = {}  # create a satelite dictionary
+    df_satelite_image_data_dict = {}  # create a satellite dictionary
     img_path_folder = _PATH_FOR_SAT_RAW_IMAGES_DIR + 'GEE_'  # the common path (add country name for full path)
     for country in _LIST_UNIQUE_COUNTRIES:  # for all countries
         print()  # print a blank line for each country
-        path_country = country.replace(' ', '_')  # replace spaces with undescores when needed
+        path_country = country.replace(' ', '_')  # replace spaces with underscores when needed
         tmp_img_path_folder = img_path_folder + path_country + '/'  # create the full dir path
         img_path_files = os.listdir(tmp_img_path_folder)  # list all files in directory
         path_to_export_plot_png = _PATH_FOR_FIGURE_PLOTS + path_country + '/'  # create the path to save plots
@@ -469,7 +467,7 @@ if _FLAG_FOR_PLOT_SAT_POLLUTION_PER_COUNTRY_FIGURES:
                                           img_stats[my_geo_img.MY_GEO_STD_DEV],
                                           img_stats[my_geo_img.MY_GEO_MEDIAN]]  # create a list with statistics
 
-                        dict_pollution_stats[pollutant].append(tmp_stats_list)  # append it to dictinary
+                        dict_pollution_stats[pollutant].append(tmp_stats_list)  # append it to dictionary
 
             df_pollution_stats = pd.DataFrame(dict_pollution_stats[pollutant], columns=_LIST_POLLUTION_STATISTIC_HEADER)
             df_pollution_stats.plot(x=_STR_X_AXIS_PLOT, y=['MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN'])
