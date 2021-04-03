@@ -49,7 +49,7 @@ _START_RESEARCH_DATE = "2020-01-01"  # "YYYY-MM-DD"
 _END_RESEARCH_DATE = "2020-12-31"  # "YYYY-MM-DD"
 
 # Create the period step
-# a multiple of week period (by week I dont mean Monday to Sunday necessary, but a 7 day in a row)
+# a multiple of week period (by week I don't mean Monday to Sunday necessary, but a 7 day in a row)
 _PERIOD_ALPHA_MULTIPLIER = 1  # a multiplier for weeks
 _PERIOD_STEP = _PERIOD_ALPHA_MULTIPLIER * 6  # the period step
 
@@ -69,11 +69,6 @@ _PATH_FOR_SAT_RAW_IMAGES_DIR = _PATH_PRIMARY_DIR + 'Satellite_Atmospheric_Images
 
 _PATH_FOR_COVID_DATE_RANGES_MEASURES_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_covid_date_range_measures.csv"
 _PATH_FOR_S05_DATE_RANGES_POLLUTANT_CSV_FILE = _PATH_FOR_COVID_CSV_DIR + "ACNN_s05_date_range_pollutants_statistics.csv"
-
-# _PATH_FOR_POLLUTANT_MODEL_DIR = 'carbon_monoxide/'
-_PATH_FOR_POLLUTANT_MODEL_DIR = 'ozone/'
-# _PATH_FOR_POLLUTANT_MODEL_DIR = 'nitrogen_dioxide/'
-# _PATH_FOR_POLLUTANT_MODEL_DIR = 'sulphur_dioxide/'
 
 
 # ----------------------------------------- #
@@ -224,10 +219,17 @@ _LIST_ACNN_COVID_MEASURES_HEADERS = ['COUNTRY', 'DATE_RANGE', 'RESTRICTIONS_INTE
 
 _LIST_POLLUTION_STATISTIC_HEADER = ['DATE_RANGE', 'MIN', 'MAX', 'MEAN', 'STD_DEV', 'MEDIAN']
 # _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide', 'ozone', 'sulphur_dioxide', 'nitrogen_dioxide']
+
+# _PATH_FOR_POLLUTANT_MODEL_DIR = 'carbon_monoxide/'
+# _PATH_FOR_POLLUTANT_MODEL_DIR = 'ozone/'
+# _PATH_FOR_POLLUTANT_MODEL_DIR = 'nitrogen_dioxide/'
+_PATH_FOR_POLLUTANT_MODEL_DIR = 'sulphur_dioxide/'
+
 # _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['carbon_monoxide']
-_LIST_POLLUTION_IDS_NAMES_IN_PATH = ['ozone']
-# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['sulphur_dioxide']
+# _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['ozone']
 # _LIST_POLLUTION_IDS_NAMES_IN_PATH = ['nitrogen_dioxide']
+_LIST_POLLUTION_IDS_NAMES_IN_PATH = ['sulphur_dioxide']
+
 _DICT_POLLUTANTS_MIN_MAX_RANGES = {'carbon_monoxide': {'min': 0.000, 'max': 0.060},
                                    'ozone': {'min': 0.100, 'max': 0.170},
                                    'sulphur_dioxide': {'min': 0.000, 'max': 0.002},
@@ -978,5 +980,6 @@ if _FLAG_FOR_TESTING_UNET:
 
                 # print(tmp_list)
                 df_results_csv.append(tmp_list)
-    export_csv_path = _PATH_PRIMARY_DIR + 'uNet_results_' + _PATH_FOR_POLLUTANT_MODEL_DIR + '.csv'
+
+    export_csv_path = _PATH_PRIMARY_DIR + 'uNet_results_' + _PATH_FOR_POLLUTANT_MODEL_DIR.split('/')[0] + '.csv'
     my_cal_v2.write_csv(export_csv_path, df_results_csv)
